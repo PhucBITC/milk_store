@@ -1,121 +1,180 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
+const distributorTypes = [
+  'Nha phan phoi khu vuc',
+  'Dai ly cap 1',
+  'Chuoi cua hang sua',
+  'Kho ban si',
+]
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [activePage, setActivePage] = useState('login')
+  const isLogin = activePage === 'login'
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="auth-shell">
+      <section className="brand-panel" aria-label="Milkstore overview">
+        <div className="brand-topline">
+          <span className="brand-mark">M</span>
+          <span>ME XIU</span>
         </div>
-        <div>
-          <h1>Get started</h1>
+
+        <div className="brand-copy">
+          <p className="eyebrow">Quan ly sua da nha phan phoi</p>
+          <h1>Van hanh don hang, ton kho va dai ly trong mot he thong.</h1>
           <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+            Nen tang mau cho doanh nghiep phan phoi sua: theo doi nha cung cap,
+            quan ly dai ly, kiem soat han su dung va dieu phoi giao hang moi
+            ngay.
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+
+        <div className="metric-grid" aria-label="Sample business metrics">
+          <article>
+            <strong>128</strong>
+            <span>Dai ly dang hoat dong</span>
+          </article>
+          <article>
+            <strong>24k</strong>
+            <span>Hop sua trong kho</span>
+          </article>
+          <article>
+            <strong>97%</strong>
+            <span>Don giao dung han</span>
+          </article>
+        </div>
+      </section>
+
+      <section className="form-panel" aria-label={isLogin ? 'Dang nhap' : 'Dang ki'}>
+        <div className="form-card">
+          <div className="form-header">
+            <p className="eyebrow">{isLogin ? 'Chao mung tro lai' : 'Tao tai khoan moi'}</p>
+            <h2>{isLogin ? 'Dang nhap he thong' : 'Dang ki nha phan phoi'}</h2>
+            <p>
+              {isLogin
+                ? 'Su dung tai khoan noi bo de truy cap bang dieu khien MilkStore.'
+                : 'Du lieu hien tai la mau de ban thiet ke va kiem thu giao dien.'}
+            </p>
+          </div>
+
+          <div className="auth-switch" role="tablist" aria-label="Chon trang">
+            <button
+              type="button"
+              className={isLogin ? 'active' : ''}
+              onClick={() => setActivePage('login')}
+              role="tab"
+              aria-selected={isLogin}
+            >
+              Dang nhap
+            </button>
+            <button
+              type="button"
+              className={!isLogin ? 'active' : ''}
+              onClick={() => setActivePage('register')}
+              role="tab"
+              aria-selected={!isLogin}
+            >
+              Dang ki
+            </button>
+          </div>
+
+          {isLogin ? (
+            <LoginForm onRegister={() => setActivePage('register')} />
+          ) : (
+            <RegisterForm onLogin={() => setActivePage('login')} />
+          )}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function LoginForm({ onRegister }) {
+  return (
+    <form className="auth-form">
+      <label>
+        Email hoac ma nhan vien
+        <input type="text" placeholder="admin@milkstore.vn" defaultValue="admin@milkstore.vn" />
+      </label>
+
+      <label>
+        Mat khau
+        <input type="password" placeholder="Nhap mat khau" defaultValue="milkstore123" />
+      </label>
+
+      <div className="form-row">
+        <label className="checkbox-label">
+          <input type="checkbox" defaultChecked />
+          Ghi nho dang nhap
+        </label>
+        <a href="#forgot">Quen mat khau?</a>
+      </div>
+
+      <button type="button" className="primary-action">
+        Dang nhap
+      </button>
+
+      <p className="form-note">
+        Chua co tai khoan?{' '}
+        <button type="button" onClick={onRegister}>
+          Dang ki nha phan phoi
         </button>
-      </section>
+      </p>
+    </form>
+  )
+}
 
-      <div className="ticks"></div>
+function RegisterForm({ onLogin }) {
+  return (
+    <form className="auth-form">
+      <div className="field-grid">
+        <label>
+          Ten doanh nghiep
+          <input type="text" placeholder="Cong ty Sua An Phu" />
+        </label>
+        <label>
+          Loai nha phan phoi
+          <select defaultValue={distributorTypes[0]}>
+            {distributorTypes.map((type) => (
+              <option key={type}>{type}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <label>
+        Email quan tri
+        <input type="email" placeholder="owner@daily-sua.vn" />
+      </label>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <div className="field-grid">
+        <label>
+          So dien thoai
+          <input type="tel" placeholder="0901 234 567" />
+        </label>
+        <label>
+          Khu vuc phu trach
+          <input type="text" placeholder="TP.HCM, Binh Duong" />
+        </label>
+      </div>
+
+      <label>
+        Mat khau
+        <input type="password" placeholder="Toi thieu 8 ki tu" />
+      </label>
+
+      <button type="button" className="primary-action">
+        Tao tai khoan mau
+      </button>
+
+      <p className="form-note">
+        Da co tai khoan?{' '}
+        <button type="button" onClick={onLogin}>
+          Dang nhap
+        </button>
+      </p>
+    </form>
   )
 }
 
