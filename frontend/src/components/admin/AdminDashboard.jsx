@@ -1,8 +1,11 @@
+import { useEffect, useState } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import NhomChuPage from '../../pages/nhom-chu/NhomChuPage'
 import NhomHangPage from '../../pages/nhom-hang/NhomHangPage'
+import HangHoaPage from '../../pages/hang-hoa/HangHoaPage'
 import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
 import LanguageSwitcher from '../auth/LanguageSwitcher'
+import { getHangHoaList } from '../../services/hangHoaService'
 
 const sampleProducts = [
   {
@@ -39,6 +42,7 @@ const menuIconTypes = [
   'product',
   'product',
   'product',
+  'invoice',
   'warehouse',
   'invoice',
   'debt',
@@ -52,6 +56,7 @@ const menuRoutes = [
   '/donvi',
   '/nhom-chu',
   '/nhom-hang',
+  '/hang-hoa',
   '/products',
   '/inventory',
   '/invoices',
@@ -64,6 +69,7 @@ const menuRoutes = [
 const pageTitles = {
   '/setting': 'Cài đặt',
   '/donvi': 'Quản lý đơn vị tính',
+  '/hang-hoa': 'Quản lý hàng hóa',
   '/products': 'Bảng điều khiển bán hàng',
   '/inventory': 'Quản lý kho hàng',
   '/invoices': 'Quản lý hóa đơn',
@@ -86,6 +92,7 @@ function AdminDashboard({
     '/donvi': t.admin.pageTitles.units,
     '/nhom-chu': t.nhomChu.pageTitle,
     '/nhom-hang': t.nhomHang.pageTitle,
+    '/hang-hoa': t.hangHoa?.pageTitle || 'Quản lý hàng hóa',
     '/products': t.admin.pageTitles.products,
     '/inventory': t.admin.pageTitles.inventory,
     '/invoices': t.admin.pageTitles.invoices,
@@ -100,7 +107,9 @@ function AdminDashboard({
     t.admin.menuItems[1],
     t.nhomChu.menuTitle,
     t.nhomHang.menuTitle,
-    ...t.admin.menuItems.slice(2),
+    t.hangHoa?.menuTitle || 'Hàng hóa',
+    t.admin.quickActions?.[0] || 'BÁN HÀNG',
+    ...t.admin.menuItems.slice(3),
   ]
 
   return (
@@ -153,6 +162,7 @@ function AdminDashboard({
           <Route path="/donvi" element={<UnitConversionPage t={t.unitConversion} />} />
           <Route path="/nhom-chu" element={<NhomChuPage t={t.nhomChu} />} />
           <Route path="/nhom-hang" element={<NhomHangPage t={t.nhomHang} />} />
+          <Route path="/hang-hoa" element={<HangHoaPage t={t.hangHoa} />} />
           <Route path="/products" element={<SalesDashboard t={t} />} />
           <Route path="/inventory" element={<PlaceholderPage title="Kho hàng" />} />
           <Route path="/invoices" element={<PlaceholderPage title="Hóa đơn" />} />
@@ -168,8 +178,94 @@ function AdminDashboard({
 }
 
 function SalesDashboard({ t }) {
+  const [dbProducts, setDbProducts] = useState([])
+  const [cartItems, setCartItems] = useState([])
+  const [selectedProduct, setSelectedProduct] = useState('')
+  const [checkoutMessage, setCheckoutMessage] = useState('')
+
+  // Tải danh sách Hàng hóa thực tế từ DB để bán
+  useEffect(() => {
+    let isMounted = true
+    getHangHoaList()
+      .then((res) => {
+        if (isMounted) {
+          setDbProducts(res.data)
+        }
+      })
+      .catch(() => {
+        // Fallback demo
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  // Danh sách gợi ý: ưu tiên hàng thật từ DB, nếu rỗng thì dùng sample
+  const availableOptions = dbProducts.length > 0
+    ? dbProducts.map((p) => ({
+        code: p.maHang,
+        name: p.tenHang,
+        unit: p.dvt,
+        price: Number(p.giaBan) || 0,
+        warehouse: 'Kho Tổng',
+        note: p.ghiChu || '',
+      }))
+    : sampleProducts.map((p) => ({
+        ...p,
+        price: Number(p.price.replace(/\./g, '')) || 0,
+      }))
+
+  const handleAddProduct = (code) => {
+    if (!code) return
+    const found = availableOptions.find((item) => item.code === code)
+    if (!found) return
+
+    setCartItems((current) => {
+      const existingIndex = current.findIndex((item) => item.code === code)
+      if (existingIndex > -1) {
+        const updated = [...current]
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + 1,
+        }
+        return updated
+      }
+      return [...current, { ...found, quantity: 1 }]
+    })
+    setSelectedProduct('')
+    setCheckoutMessage('')
+  }
+
+  const handleUpdateQty = (code, delta) => {
+    setCartItems((current) => {
+      return current
+        .map((item) => {
+          if (item.code === code) {
+            const newQty = item.quantity + delta
+            return { ...item, quantity: newQty }
+          }
+          return item
+        })
+        .filter((item) => item.quantity > 0)
+    })
+  }
+
+  const totalPrice = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
+  const handleCheckout = () => {
+    if (cartItems.length === 0) return
+    setCheckoutMessage(`Thanh toán thành công hóa đơn trị giá ${totalPrice.toLocaleString('vi-VN')} đ!`)
+    setCartItems([])
+  }
+
   return (
     <>
+      {checkoutMessage ? (
+        <div style={{ padding: '1rem', background: '#d4edda', color: '#155724', borderRadius: '4px', marginBottom: '1rem', fontWeight: 'bold' }}>
+          🎉 {checkoutMessage}
+        </div>
+      ) : null}
+
       <section className="admin-stats" aria-label="Dashboard stats">
         {adminStats.map((stat) => (
           <article key={stat.label}>
@@ -181,18 +277,26 @@ function SalesDashboard({ t }) {
 
       <section className="sales-layout">
         <div className="sales-main">
-          <div className="sales-toolbar">
+          <div className="sales-toolbar" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
               <h2>{t.admin.quickActions[0]}</h2>
               <p>{t.admin.salesDescription}</p>
             </div>
 
-            <div className="toolbar-actions">
-              {t.admin.quickActions.slice(1, 4).map((action) => (
-                <button key={action} type="button">
-                  {action}
-                </button>
-              ))}
+            {/* Thanh chọn sản phẩm để bán */}
+            <div style={{ flex: 1, minWidth: '250px' }}>
+              <select
+                value={selectedProduct}
+                onChange={(e) => handleAddProduct(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', background: '#fff', color: '#333', fontWeight: 'bold' }}
+              >
+                <option value="">🔍 Chọn sản phẩm thêm vào hóa đơn...</option>
+                {availableOptions.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    [{opt.code}] {opt.name} - {opt.price.toLocaleString('vi-VN')} đ/{opt.unit}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -200,25 +304,63 @@ function SalesDashboard({ t }) {
             <table>
               <thead>
                 <tr>
-                  {t.admin.columns.map((column) => (
-                    <th key={column}>{column}</th>
-                  ))}
+                  <th>STT</th>
+                  <th>Mã hàng</th>
+                  <th>Tên hàng</th>
+                  <th>Đvt</th>
+                  <th>Số lượng</th>
+                  <th>Đơn giá</th>
+                  <th>Thành tiền</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {sampleProducts.map((product, index) => (
-                  <tr key={product.code}>
-                    <td>{index + 1}</td>
-                    <td>{product.code}</td>
-                    <td>{product.name}</td>
-                    <td>{product.unit}</td>
-                    <td>{product.warehouse}</td>
-                    <td>{product.quantity}</td>
-                    <td>{product.price}</td>
-                    <td>{product.total}</td>
-                    <td>{product.note}</td>
+                {cartItems.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
+                      {t.admin.emptyText || 'Hóa đơn chưa có sản phẩm. Vui lòng chọn sản phẩm ở trên.'}
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  cartItems.map((item, index) => (
+                    <tr key={item.code}>
+                      <td>{index + 1}</td>
+                      <td><strong>{item.code}</strong></td>
+                      <td>{item.name}</td>
+                      <td>{item.unit}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateQty(item.code, -1)}
+                            style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: '#eee', border: '1px solid #ccc', borderRadius: '2px' }}
+                          >
+                            -
+                          </button>
+                          <strong>{item.quantity}</strong>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateQty(item.code, 1)}
+                            style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: '#eee', border: '1px solid #ccc', borderRadius: '2px' }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td>{item.price.toLocaleString('vi-VN')}</td>
+                      <td><strong>{(item.price * item.quantity).toLocaleString('vi-VN')}</strong></td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQty(item.code, -item.quantity)}
+                          style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          Xóa
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -227,7 +369,7 @@ function SalesDashboard({ t }) {
         <aside className="checkout-panel" aria-label={t.admin.payment}>
           <div className="checkout-header">
             <span>{t.admin.payment}</span>
-            <strong>1.200.000</strong>
+            <strong>{totalPrice.toLocaleString('vi-VN')} đ</strong>
           </div>
 
           <label className="admin-checkbox">
@@ -249,14 +391,17 @@ function SalesDashboard({ t }) {
           <p className="amount-text">{t.admin.amountInWords}</p>
 
           <div className="payment-actions">
-            <button type="button" className="secondary-admin-action">
-              {t.admin.saveOrder}
+            <button type="button" className="secondary-admin-action" onClick={() => setCartItems([])}>
+              {t.admin.deleteBill || 'Xóa đơn'}
             </button>
-            <button type="button" className="secondary-admin-action">
-              {t.admin.preview}
-            </button>
-            <button type="button" className="pay-action">
-              {t.admin.payNow}
+            <button
+              type="button"
+              className="pay-action"
+              onClick={handleCheckout}
+              disabled={cartItems.length === 0}
+              style={{ opacity: cartItems.length === 0 ? 0.5 : 1, cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer' }}
+            >
+              {t.admin.payNow || 'F12 Thanh toán'}
             </button>
           </div>
         </aside>
