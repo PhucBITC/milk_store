@@ -10,7 +10,7 @@ import {
   updateUnitConversion,
 } from '../../services/unitConversionService'
 
-function UnitConversionPage() {
+function UnitConversionPage({ t }) {
   const [items, setItems] = useState([])
   const [editingItem, setEditingItem] = useState(null)
   const [calculation, setCalculation] = useState(null)
@@ -21,7 +21,7 @@ function UnitConversionPage() {
       const response = await getUnitConversions()
       setItems(response.data)
     } catch {
-      setMessage('Không thể tải danh sách đơn vị tính.')
+      setMessage(t.messages.loadFailed)
     }
   }
 
@@ -36,44 +36,44 @@ function UnitConversionPage() {
       })
       .catch(() => {
         if (isMounted) {
-          setMessage('Không thể tải danh sách đơn vị tính.')
+          setMessage(t.messages.loadFailed)
         }
       })
 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [t.messages.loadFailed])
 
   const handleSubmit = async (formData) => {
     try {
       if (editingItem) {
         await updateUnitConversion(editingItem.MADVT, formData)
-        setMessage('Đã cập nhật đơn vị tính.')
+        setMessage(t.messages.updated)
       } else {
         await createUnitConversion(formData)
-        setMessage('Đã thêm đơn vị tính.')
+        setMessage(t.messages.created)
       }
 
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Không thể lưu đơn vị tính.')
+      setMessage(error.response?.data?.message || t.messages.saveFailed)
     }
   }
 
   const handleDelete = async (MADVT) => {
-    if (!window.confirm('Xóa đơn vị tính này?')) {
+    if (!window.confirm(t.deleteConfirm)) {
       return
     }
 
     try {
       await deleteUnitConversion(MADVT)
       setCalculation(null)
-      setMessage('Đã xóa đơn vị tính.')
+      setMessage(t.messages.deleted)
       await loadItems()
     } catch {
-      setMessage('Không thể xóa đơn vị tính.')
+      setMessage(t.messages.deleteFailed)
     }
   }
 
@@ -83,7 +83,7 @@ function UnitConversionPage() {
       setCalculation(response.data)
       setMessage('')
     } catch {
-      setMessage('Không thể tính quy đổi.')
+      setMessage(t.messages.calculateFailed)
     }
   }
 
@@ -91,9 +91,9 @@ function UnitConversionPage() {
     <section className="unit-page">
       <div className="unit-page-header">
         <div>
-          <p className="eyebrow">Đơn vị tính</p>
-          <h2>Unit Conversion</h2>
-          <p>Quản lý quy đổi DVT1 → DVT2 → DVT3 cho sản phẩm.</p>
+          <p className="eyebrow">{t.eyebrow}</p>
+          <h2>{t.title}</h2>
+          <p>{t.description}</p>
         </div>
       </div>
 
@@ -101,22 +101,24 @@ function UnitConversionPage() {
 
       <div className="unit-layout">
         <div className="unit-panel">
-          <h3>{editingItem ? 'Sửa đơn vị tính' : 'Thêm đơn vị tính'}</h3>
+          <h3>{editingItem ? t.editTitle : t.addTitle}</h3>
           <UnitConversionForm
             key={editingItem?.MADVT || 'new'}
             editingItem={editingItem}
+            t={t}
             onCancel={() => setEditingItem(null)}
             onSubmit={handleSubmit}
           />
         </div>
 
-        <UnitConversionCalculator result={calculation} />
+        <UnitConversionCalculator result={calculation} t={t} />
       </div>
 
       <div className="unit-panel">
-        <h3>Danh sách đơn vị tính</h3>
+        <h3>{t.listTitle}</h3>
         <UnitConversionTable
           items={items}
+          t={t}
           onCalculate={handleCalculate}
           onDelete={handleDelete}
           onEdit={setEditingItem}

@@ -1,16 +1,16 @@
-function UnitConversionCalculator({ result }) {
+function UnitConversionCalculator({ result, t }) {
   if (!result) {
     return (
       <aside className="unit-calculator">
-        <span>Y NGHIA QUY DOI</span>
-        <p>CHON MOT DONG VA BAM TINH DE XEM QUY DOI DON VI.</p>
+        <span>{t.calculatorTitle}</span>
+        <p>{t.calculatorEmpty}</p>
       </aside>
     )
   }
 
   return (
     <aside className="unit-calculator">
-      <span>Y NGHIA QUY DOI</span>
+      <span>{t.calculatorTitle}</span>
       <strong>
         {result.DVT1} - {result.DVT2} - {result.DVT3}
       </strong>
@@ -23,7 +23,6 @@ function UnitConversionCalculator({ result }) {
       <p>
         1 {result.DVT1} = {result.SMALLEST_QUANTITY_PER_LARGEST_UNIT} {result.DVT3}
       </p>
-      <small>{result.DESCRIPTION}</small>
     </aside>
   )
 }

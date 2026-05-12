@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AdminDashboard from './components/admin/AdminDashboard'
 import AuthCard from './components/auth/AuthCard'
 import BrandPanel from './components/auth/BrandPanel'
@@ -6,10 +7,17 @@ import { loginUser, registerUser } from './services/authService'
 import { translations } from './translations'
 import './App.css'
 
+const authPaths = ['/', '/login', '/register']
+
 function App() {
-  const [activePage, setActivePage] = useState('login')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activePage = location.pathname === '/register' ? 'register' : 'login'
   const [authMessage, setAuthMessage] = useState('')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = sessionStorage.getItem('milkstore-current-user')
+    return savedUser ? JSON.parse(savedUser) : null
+  })
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('milkstore-language') || 'vi'
   })
@@ -22,7 +30,7 @@ function App() {
 
   const handlePageChange = (page) => {
     setAuthMessage('')
-    setActivePage(page)
+    navigate(page === 'register' ? '/register' : '/login')
   }
 
   const handleRegister = async (account) => {
@@ -59,7 +67,7 @@ function App() {
         maCuaHang,
       })
       setAuthMessage(t.authMessages.registered)
-      setActivePage('login')
+      navigate('/login')
     } catch (error) {
       setAuthMessage(error.response?.data?.message || t.authMessages.registerFailed)
     }
@@ -76,6 +84,8 @@ function App() {
       window.alert(t.authMessages.loginSuccess)
       setAuthMessage('')
       setCurrentUser(response.data.user)
+      sessionStorage.setItem('milkstore-current-user', JSON.stringify(response.data.user))
+      navigate(location.state?.from?.pathname || '/products')
     } catch {
       setAuthMessage(t.authMessages.invalidLogin)
     }
@@ -83,10 +93,15 @@ function App() {
 
   const handleLogout = () => {
     setCurrentUser(null)
-    setActivePage('login')
+    sessionStorage.removeItem('milkstore-current-user')
+    navigate('/login')
   }
 
   if (currentUser) {
+    if (authPaths.includes(location.pathname)) {
+      return <Navigate to="/products" replace />
+    }
+
     return (
       <AdminDashboard
         accountEmail={currentUser.maTaiKhoan}
@@ -96,6 +111,10 @@ function App() {
         onLogout={handleLogout}
       />
     )
+  }
+
+  if (!authPaths.includes(location.pathname)) {
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   return (

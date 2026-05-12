@@ -1,23 +1,23 @@
-function UnitConversionTable({ items, onCalculate, onDelete, onEdit }) {
+function UnitConversionTable({ items, t, onCalculate, onDelete, onEdit }) {
   return (
     <div className="unit-table-wrap">
       <table className="unit-table">
         <thead>
           <tr>
-            <th>MADVT</th>
-            <th>DVT1</th>
-            <th>DVT2</th>
-            <th>DVT3</th>
-            <th>QC1</th>
-            <th>QC2</th>
-            <th>Quy đổi</th>
-            <th>Thao tác</th>
+            <th>{t.fields.MADVT}</th>
+            <th>{t.fields.DVT1}</th>
+            <th>{t.fields.DVT2}</th>
+            <th>{t.fields.DVT3}</th>
+            <th>{t.fields.QC1}</th>
+            <th>{t.fields.QC2}</th>
+            <th>{t.conversion}</th>
+            <th>{t.actions}</th>
           </tr>
         </thead>
         <tbody>
           {items.length === 0 ? (
             <tr>
-              <td colSpan="8">Chưa có đơn vị tính.</td>
+              <td colSpan="8">{t.empty}</td>
             </tr>
           ) : (
             items.map((item) => (
@@ -34,13 +34,13 @@ function UnitConversionTable({ items, onCalculate, onDelete, onEdit }) {
                 <td>
                   <div className="unit-row-actions">
                     <button type="button" onClick={() => onCalculate(item.MADVT)}>
-                      Tính
+                      {t.calculate}
                     </button>
                     <button type="button" onClick={() => onEdit(item)}>
-                      Sửa
+                      {t.edit}
                     </button>
                     <button type="button" onClick={() => onDelete(item.MADVT)}>
-                      Xóa
+                      {t.delete}
                     </button>
                   </div>
                 </td>

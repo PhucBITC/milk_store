@@ -9,7 +9,7 @@ const emptyForm = {
   QC2: 1,
 }
 
-function UnitConversionForm({ editingItem, onCancel, onSubmit }) {
+function UnitConversionForm({ editingItem, t, onCancel, onSubmit }) {
   const initialFormData = editingItem
     ? {
         MADVT: editingItem.MADVT,
@@ -38,52 +38,52 @@ function UnitConversionForm({ editingItem, onCancel, onSubmit }) {
   return (
     <form className="unit-form" onSubmit={handleSubmit}>
       <label>
-        MADVT
+        {t.fields.MADVT}
         <input
           name="MADVT"
           value={formData.MADVT}
           onChange={handleChange}
-          placeholder="VD: 00008"
+          placeholder={t.placeholders.MADVT}
           readOnly={Boolean(editingItem)}
           required
         />
       </label>
 
       <label>
-        DVT1
+        {t.fields.DVT1}
         <input
           name="DVT1"
           value={formData.DVT1}
           onChange={handleChange}
-          placeholder="VD: THUNG"
+          placeholder={t.placeholders.DVT1}
           required
         />
       </label>
 
       <label>
-        DVT2
+        {t.fields.DVT2}
         <input
           name="DVT2"
           value={formData.DVT2}
           onChange={handleChange}
-          placeholder="VD: LOC"
+          placeholder={t.placeholders.DVT2}
           required
         />
       </label>
 
       <label>
-        DVT3
+        {t.fields.DVT3}
         <input
           name="DVT3"
           value={formData.DVT3}
           onChange={handleChange}
-          placeholder="VD: HOP"
+          placeholder={t.placeholders.DVT3}
           required
         />
       </label>
 
       <label>
-        QC1
+        {t.fields.QC1}
         <input
           min="1"
           name="QC1"
@@ -95,7 +95,7 @@ function UnitConversionForm({ editingItem, onCancel, onSubmit }) {
       </label>
 
       <label>
-        QC2
+        {t.fields.QC2}
         <input
           min="1"
           name="QC2"
@@ -108,11 +108,11 @@ function UnitConversionForm({ editingItem, onCancel, onSubmit }) {
 
       <div className="unit-form-actions">
         <button type="submit" className="pay-action">
-          {editingItem ? 'Cập nhật' : 'Thêm mới'}
+          {editingItem ? t.submitUpdate : t.submitCreate}
         </button>
         {editingItem ? (
           <button type="button" className="secondary-admin-action" onClick={onCancel}>
-            Hủy
+            {t.cancel}
           </button>
         ) : null}
       </div>

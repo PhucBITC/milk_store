@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
 import LanguageSwitcher from '../auth/LanguageSwitcher'
 
@@ -43,6 +43,30 @@ const menuIconTypes = [
   'help',
 ]
 
+const menuRoutes = [
+  '/setting',
+  '/donvi',
+  '/products',
+  '/inventory',
+  '/invoices',
+  '/debts',
+  '/cash',
+  '/reports',
+  '/help',
+]
+
+const pageTitles = {
+  '/setting': 'Cài đặt',
+  '/donvi': 'Quản lý đơn vị tính',
+  '/products': 'Bảng điều khiển bán hàng',
+  '/inventory': 'Quản lý kho hàng',
+  '/invoices': 'Quản lý hóa đơn',
+  '/debts': 'Quản lý công nợ',
+  '/cash': 'Quản lý thu chi',
+  '/reports': 'Báo cáo',
+  '/help': 'Hướng dẫn',
+}
+
 function AdminDashboard({
   accountEmail,
   language,
@@ -50,8 +74,19 @@ function AdminDashboard({
   onLanguageChange,
   onLogout,
 }) {
-  const [activeMenuIndex, setActiveMenuIndex] = useState(2)
-  const isUnitConversionPage = activeMenuIndex === 1
+  const location = useLocation()
+  const translatedPageTitles = {
+    '/setting': t.admin.pageTitles.settings,
+    '/donvi': t.admin.pageTitles.units,
+    '/products': t.admin.pageTitles.products,
+    '/inventory': t.admin.pageTitles.inventory,
+    '/invoices': t.admin.pageTitles.invoices,
+    '/debts': t.admin.pageTitles.debts,
+    '/cash': t.admin.pageTitles.cash,
+    '/reports': t.admin.pageTitles.reports,
+    '/help': t.admin.pageTitles.help,
+  }
+  const currentTitle = translatedPageTitles[location.pathname] || pageTitles[location.pathname] || translatedPageTitles['/products']
 
   return (
     <main className="admin-shell">
@@ -66,15 +101,13 @@ function AdminDashboard({
 
         <nav className="admin-nav">
           {t.admin.menuItems.map((item, index) => (
-            <button
+            <NavLink
               key={item}
-              type="button"
-              className={activeMenuIndex === index ? 'active' : ''}
-              onClick={() => setActiveMenuIndex(index)}
+              to={menuRoutes[index]}
             >
               <AdminIcon type={menuIconTypes[index]} />
               {item}
-            </button>
+            </NavLink>
           ))}
         </nav>
       </aside>
@@ -83,7 +116,7 @@ function AdminDashboard({
         <header className="admin-topbar">
           <div>
             <p className="eyebrow">{t.admin.title}</p>
-            <h1>{isUnitConversionPage ? 'Quản lý đơn vị tính' : t.admin.dashboardTitle}</h1>
+            <h1>{currentTitle}</h1>
           </div>
 
           <div className="admin-user">
@@ -99,105 +132,129 @@ function AdminDashboard({
           </div>
         </header>
 
-        {isUnitConversionPage ? (
-          <UnitConversionPage />
-        ) : (
-          <>
-            <section className="admin-stats" aria-label="Dashboard stats">
-              {adminStats.map((stat) => (
-                <article key={stat.label}>
-                  <strong>{stat.value}</strong>
-                  <span>{stat.label}</span>
-                </article>
-              ))}
-            </section>
-
-            <section className="sales-layout">
-              <div className="sales-main">
-                <div className="sales-toolbar">
-                  <div>
-                    <h2>{t.admin.quickActions[0]}</h2>
-                    <p>{t.admin.salesDescription}</p>
-                  </div>
-
-                  <div className="toolbar-actions">
-                    {t.admin.quickActions.slice(1, 4).map((action) => (
-                      <button key={action} type="button">
-                        {action}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="invoice-area" aria-label={t.admin.title}>
-                  <table>
-                    <thead>
-                      <tr>
-                        {t.admin.columns.map((column) => (
-                          <th key={column}>{column}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sampleProducts.map((product, index) => (
-                        <tr key={product.code}>
-                          <td>{index + 1}</td>
-                          <td>{product.code}</td>
-                          <td>{product.name}</td>
-                          <td>{product.unit}</td>
-                          <td>{product.warehouse}</td>
-                          <td>{product.quantity}</td>
-                          <td>{product.price}</td>
-                          <td>{product.total}</td>
-                          <td>{product.note}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <aside className="checkout-panel" aria-label={t.admin.payment}>
-                <div className="checkout-header">
-                  <span>{t.admin.payment}</span>
-                  <strong>1.200.000</strong>
-                </div>
-
-                <label className="admin-checkbox">
-                  <input type="checkbox" />
-                  {t.admin.noPrint}
-                </label>
-
-                <div className="discount-grid">
-                  <label>
-                    {t.admin.discount}
-                    <input value="0" readOnly />
-                  </label>
-                  <label>
-                    {t.admin.percentDiscount}
-                    <input value="0%" readOnly />
-                  </label>
-                </div>
-
-                <p className="amount-text">{t.admin.amountInWords}</p>
-
-                <div className="payment-actions">
-                  <button type="button" className="secondary-admin-action">
-                    {t.admin.saveOrder}
-                  </button>
-                  <button type="button" className="secondary-admin-action">
-                    {t.admin.preview}
-                  </button>
-                  <button type="button" className="pay-action">
-                    {t.admin.payNow}
-                  </button>
-                </div>
-              </aside>
-            </section>
-          </>
-        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/products" replace />} />
+          <Route path="/setting" element={<PlaceholderPage title="Cài đặt" />} />
+          <Route path="/donvi" element={<UnitConversionPage t={t.unitConversion} />} />
+          <Route path="/products" element={<SalesDashboard t={t} />} />
+          <Route path="/inventory" element={<PlaceholderPage title="Kho hàng" />} />
+          <Route path="/invoices" element={<PlaceholderPage title="Hóa đơn" />} />
+          <Route path="/debts" element={<PlaceholderPage title="Công nợ" />} />
+          <Route path="/cash" element={<PlaceholderPage title="Thu chi" />} />
+          <Route path="/reports" element={<PlaceholderPage title="Báo cáo" />} />
+          <Route path="/help" element={<PlaceholderPage title="Hướng dẫn" />} />
+          <Route path="*" element={<Navigate to="/products" replace />} />
+        </Routes>
       </section>
     </main>
+  )
+}
+
+function SalesDashboard({ t }) {
+  return (
+    <>
+      <section className="admin-stats" aria-label="Dashboard stats">
+        {adminStats.map((stat) => (
+          <article key={stat.label}>
+            <strong>{stat.value}</strong>
+            <span>{stat.label}</span>
+          </article>
+        ))}
+      </section>
+
+      <section className="sales-layout">
+        <div className="sales-main">
+          <div className="sales-toolbar">
+            <div>
+              <h2>{t.admin.quickActions[0]}</h2>
+              <p>{t.admin.salesDescription}</p>
+            </div>
+
+            <div className="toolbar-actions">
+              {t.admin.quickActions.slice(1, 4).map((action) => (
+                <button key={action} type="button">
+                  {action}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="invoice-area" aria-label={t.admin.title}>
+            <table>
+              <thead>
+                <tr>
+                  {t.admin.columns.map((column) => (
+                    <th key={column}>{column}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sampleProducts.map((product, index) => (
+                  <tr key={product.code}>
+                    <td>{index + 1}</td>
+                    <td>{product.code}</td>
+                    <td>{product.name}</td>
+                    <td>{product.unit}</td>
+                    <td>{product.warehouse}</td>
+                    <td>{product.quantity}</td>
+                    <td>{product.price}</td>
+                    <td>{product.total}</td>
+                    <td>{product.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside className="checkout-panel" aria-label={t.admin.payment}>
+          <div className="checkout-header">
+            <span>{t.admin.payment}</span>
+            <strong>1.200.000</strong>
+          </div>
+
+          <label className="admin-checkbox">
+            <input type="checkbox" />
+            {t.admin.noPrint}
+          </label>
+
+          <div className="discount-grid">
+            <label>
+              {t.admin.discount}
+              <input value="0" readOnly />
+            </label>
+            <label>
+              {t.admin.percentDiscount}
+              <input value="0%" readOnly />
+            </label>
+          </div>
+
+          <p className="amount-text">{t.admin.amountInWords}</p>
+
+          <div className="payment-actions">
+            <button type="button" className="secondary-admin-action">
+              {t.admin.saveOrder}
+            </button>
+            <button type="button" className="secondary-admin-action">
+              {t.admin.preview}
+            </button>
+            <button type="button" className="pay-action">
+              {t.admin.payNow}
+            </button>
+          </div>
+        </aside>
+      </section>
+    </>
+  )
+}
+
+function PlaceholderPage({ title }) {
+  return (
+    <section className="admin-placeholder">
+      <p className="eyebrow">{title}</p>
+      <h2>{title}</h2>
+      <p>Trang này sẽ được bổ sung chức năng ở bước tiếp theo.</p>
+    </section>
   )
 }
 
