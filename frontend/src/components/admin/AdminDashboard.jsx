@@ -1,4 +1,6 @@
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import NhomChuPage from '../../pages/nhom-chu/NhomChuPage'
+import NhomHangPage from '../../pages/nhom-hang/NhomHangPage'
 import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
 import LanguageSwitcher from '../auth/LanguageSwitcher'
 
@@ -35,6 +37,8 @@ const menuIconTypes = [
   'settings',
   'unit',
   'product',
+  'product',
+  'product',
   'warehouse',
   'invoice',
   'debt',
@@ -46,6 +50,8 @@ const menuIconTypes = [
 const menuRoutes = [
   '/setting',
   '/donvi',
+  '/nhom-chu',
+  '/nhom-hang',
   '/products',
   '/inventory',
   '/invoices',
@@ -78,6 +84,8 @@ function AdminDashboard({
   const translatedPageTitles = {
     '/setting': t.admin.pageTitles.settings,
     '/donvi': t.admin.pageTitles.units,
+    '/nhom-chu': t.nhomChu.pageTitle,
+    '/nhom-hang': t.nhomHang.pageTitle,
     '/products': t.admin.pageTitles.products,
     '/inventory': t.admin.pageTitles.inventory,
     '/invoices': t.admin.pageTitles.invoices,
@@ -87,6 +95,13 @@ function AdminDashboard({
     '/help': t.admin.pageTitles.help,
   }
   const currentTitle = translatedPageTitles[location.pathname] || pageTitles[location.pathname] || translatedPageTitles['/products']
+  const adminMenuItems = [
+    t.admin.menuItems[0],
+    t.admin.menuItems[1],
+    t.nhomChu.menuTitle,
+    t.nhomHang.menuTitle,
+    ...t.admin.menuItems.slice(2),
+  ]
 
   return (
     <main className="admin-shell">
@@ -100,7 +115,7 @@ function AdminDashboard({
         </div>
 
         <nav className="admin-nav">
-          {t.admin.menuItems.map((item, index) => (
+          {adminMenuItems.map((item, index) => (
             <NavLink
               key={item}
               to={menuRoutes[index]}
@@ -136,6 +151,8 @@ function AdminDashboard({
           <Route path="/" element={<Navigate to="/products" replace />} />
           <Route path="/setting" element={<PlaceholderPage title="Cài đặt" />} />
           <Route path="/donvi" element={<UnitConversionPage t={t.unitConversion} />} />
+          <Route path="/nhom-chu" element={<NhomChuPage t={t.nhomChu} />} />
+          <Route path="/nhom-hang" element={<NhomHangPage t={t.nhomHang} />} />
           <Route path="/products" element={<SalesDashboard t={t} />} />
           <Route path="/inventory" element={<PlaceholderPage title="Kho hàng" />} />
           <Route path="/invoices" element={<PlaceholderPage title="Hóa đơn" />} />

@@ -940,6 +940,57 @@
   cursor: pointer;
 }
 
+.nhom-chu-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.nhom-chu-form label {
+  display: grid;
+  gap: 8px;
+  color: #314a46;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.nhom-chu-form input,
+.nhom-chu-form select,
+.nhom-chu-toolbar input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d6e2df;
+  border-radius: 6px;
+  color: #173b36;
+  background: #fbfdfc;
+  font: inherit;
+  font-weight: 800;
+}
+
+.nhom-chu-form input:focus,
+.nhom-chu-form select:focus,
+.nhom-chu-toolbar input:focus {
+  border-color: #1d6b61;
+  box-shadow: 0 0 0 3px rgba(29, 107, 97, 0.14);
+  outline: 0;
+}
+
+.nhom-chu-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nhom-chu-toolbar form {
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) auto;
+  gap: 10px;
+}
+
 @media (max-width: 1280px) {
   .admin-shell {
     grid-template-columns: 1fr;
@@ -1007,7 +1058,14 @@
 
   .unit-layout,
   .unit-form,
-  .unit-form-actions {
+  .unit-form-actions,
+  .nhom-chu-form,
+  .nhom-chu-toolbar,
+  .nhom-chu-toolbar form {
     grid-template-columns: 1fr;
+  }
+
+  .nhom-chu-toolbar {
+    display: grid;
   }
 }
