@@ -4,9 +4,11 @@ import com.milkstore.dto.request.HangHoaRequest;
 import com.milkstore.dto.response.HangHoaResponse;
 import com.milkstore.entity.HangHoa;
 import com.milkstore.entity.NhomHang;
+import com.milkstore.entity.UnitConversion;
 import com.milkstore.exception.ResourceNotFoundException;
 import com.milkstore.repository.HangHoaRepository;
 import com.milkstore.repository.NhomHangRepository;
+import com.milkstore.repository.UnitConversionRepository;
 import com.milkstore.service.HangHoaService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,10 +28,16 @@ public class HangHoaServiceImpl implements HangHoaService {
 
     private final HangHoaRepository hangHoaRepository;
     private final NhomHangRepository nhomHangRepository;
+    private final UnitConversionRepository unitConversionRepository;
 
-    public HangHoaServiceImpl(HangHoaRepository hangHoaRepository, NhomHangRepository nhomHangRepository) {
+    public HangHoaServiceImpl(
+            HangHoaRepository hangHoaRepository,
+            NhomHangRepository nhomHangRepository,
+            UnitConversionRepository unitConversionRepository
+    ) {
         this.hangHoaRepository = hangHoaRepository;
         this.nhomHangRepository = nhomHangRepository;
+        this.unitConversionRepository = unitConversionRepository;
     }
 
     @Override
@@ -65,6 +73,7 @@ public class HangHoaServiceImpl implements HangHoaService {
     public HangHoaResponse create(HangHoaRequest request) {
         LocalDateTime now = LocalDateTime.now();
         NhomHang nhomHang = findNhomHang(request.getMaNhomHang());
+        UnitConversion unitConversion = findUnitConversion(request.getMaDvt());
 
         String requestedMaHang = cleanOptionalText(request.getMaHang());
         String finalMaHang;
@@ -81,8 +90,13 @@ public class HangHoaServiceImpl implements HangHoaService {
         hangHoa.setMaHang(finalMaHang);
         hangHoa.setTenHang(cleanText(request.getTenHang()));
         hangHoa.setNhomHang(nhomHang);
-        hangHoa.setDvt(cleanText(request.getDvt()));
-        hangHoa.setGiaBan(request.getGiaBan() != null ? request.getGiaBan() : BigDecimal.ZERO);
+        hangHoa.setUnitConversion(unitConversion);
+
+        // Đặt 3 mức giá sỉ/lẻ
+        hangHoa.setGiaBan1(request.getGiaBan1() != null ? request.getGiaBan1() : BigDecimal.ZERO);
+        hangHoa.setGiaBan2(request.getGiaBan2() != null ? request.getGiaBan2() : BigDecimal.ZERO);
+        hangHoa.setGiaBan3(request.getGiaBan3() != null ? request.getGiaBan3() : BigDecimal.ZERO);
+
         hangHoa.setGiaNhap(request.getGiaNhap() != null ? request.getGiaNhap() : BigDecimal.ZERO);
         hangHoa.setTonKho(request.getTonKho() != null ? request.getTonKho() : 0);
         hangHoa.setHienThi(request.getHienThi() != null ? request.getHienThi() : true);
@@ -96,12 +110,20 @@ public class HangHoaServiceImpl implements HangHoaService {
     public HangHoaResponse update(String maHang, HangHoaRequest request) {
         HangHoa hangHoa = findByMaHang(maHang);
         NhomHang nhomHang = findNhomHang(request.getMaNhomHang());
+        UnitConversion unitConversion = findUnitConversion(request.getMaDvt());
 
         hangHoa.setTenHang(cleanText(request.getTenHang()));
         hangHoa.setNhomHang(nhomHang);
-        hangHoa.setDvt(cleanText(request.getDvt()));
-        if (request.getGiaBan() != null) {
-            hangHoa.setGiaBan(request.getGiaBan());
+        hangHoa.setUnitConversion(unitConversion);
+
+        if (request.getGiaBan1() != null) {
+            hangHoa.setGiaBan1(request.getGiaBan1());
+        }
+        if (request.getGiaBan2() != null) {
+            hangHoa.setGiaBan2(request.getGiaBan2());
+        }
+        if (request.getGiaBan3() != null) {
+            hangHoa.setGiaBan3(request.getGiaBan3());
         }
         if (request.getGiaNhap() != null) {
             hangHoa.setGiaNhap(request.getGiaNhap());
@@ -150,18 +172,40 @@ public class HangHoaServiceImpl implements HangHoaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Nhom hang not found with MANHOMHANG: " + cleanMaNhomHang));
     }
 
+    private UnitConversion findUnitConversion(String maDvt) {
+        String cleanMaDvt = maDvt == null ? "" : maDvt.trim();
+        return unitConversionRepository.findById(cleanMaDvt)
+                .orElseThrow(() -> new ResourceNotFoundException("Unit conversion not found with MADVT: " + cleanMaDvt));
+    }
+
     private HangHoaResponse toResponse(HangHoa hangHoa) {
         HangHoaResponse response = new HangHoaResponse();
         response.setMaHang(hangHoa.getMaHang());
         response.setTenHang(hangHoa.getTenHang());
-        response.setDvt(hangHoa.getDvt());
-        response.setGiaBan(hangHoa.getGiaBan());
+
+        // Giá nhập, tồn kho, trạng thái
         response.setGiaNhap(hangHoa.getGiaNhap());
         response.setTonKho(hangHoa.getTonKho());
         response.setHienThi(hangHoa.getHienThi());
         response.setGhiChu(hangHoa.getGhiChu());
         response.setNgayTao(hangHoa.getNgayTao());
 
+        // 3 mức giá sỉ lẻ
+        response.setGiaBan1(hangHoa.getGiaBan1());
+        response.setGiaBan2(hangHoa.getGiaBan2());
+        response.setGiaBan3(hangHoa.getGiaBan3());
+
+        // Thông tin quy đổi DVT
+        if (hangHoa.getUnitConversion() != null) {
+            response.setMaDvt(hangHoa.getUnitConversion().getMaDvt());
+            response.setDvt1(hangHoa.getUnitConversion().getDvt1());
+            response.setDvt2(hangHoa.getUnitConversion().getDvt2());
+            response.setDvt3(hangHoa.getUnitConversion().getDvt3());
+            response.setQc1(hangHoa.getUnitConversion().getQc1());
+            response.setQc2(hangHoa.getUnitConversion().getQc2());
+        }
+
+        // Liên kết nhóm
         if (hangHoa.getNhomHang() != null) {
             response.setMaNhomHang(hangHoa.getNhomHang().getMaNhomHang());
             response.setTenNhomHang(hangHoa.getNhomHang().getTenNhomHang());

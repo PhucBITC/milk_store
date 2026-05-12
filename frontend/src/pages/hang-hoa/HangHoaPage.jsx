@@ -7,13 +7,16 @@ import {
   updateHangHoa,
 } from '../../services/hangHoaService'
 import { getNhomHangList } from '../../services/nhomHangService'
+import { getUnitConversions } from '../../services/unitConversionService'
 
 const emptyForm = {
   maHang: '',
   tenHang: '',
   maNhomHang: '',
-  dvt: '',
-  giaBan: '',
+  maDvt: '',
+  giaBan1: '',
+  giaBan2: '',
+  giaBan3: '',
   giaNhap: '',
   tonKho: '',
   ghiChu: '',
@@ -22,6 +25,7 @@ const emptyForm = {
 function HangHoaPage({ t }) {
   const [items, setItems] = useState([])
   const [nhomHangItems, setNhomHangItems] = useState([])
+  const [unitConversionsItems, setUnitConversionsItems] = useState([])
   const [formData, setFormData] = useState(emptyForm)
   const [editingItem, setEditingItem] = useState(null)
   const [keyword, setKeyword] = useState('')
@@ -44,6 +48,15 @@ function HangHoaPage({ t }) {
         const nhomHangRes = await getNhomHangList()
         if (isMounted) {
           setNhomHangItems(nhomHangRes.data)
+        }
+      } catch {
+        // Bỏ qua nếu lỗi
+      }
+
+      try {
+        const dvtRes = await getUnitConversions()
+        if (isMounted) {
+          setUnitConversionsItems(dvtRes.data)
         }
       } catch {
         // Bỏ qua nếu lỗi
@@ -81,7 +94,9 @@ function HangHoaPage({ t }) {
 
     const payload = {
       ...formData,
-      giaBan: formData.giaBan ? Number(formData.giaBan) : 0,
+      giaBan1: formData.giaBan1 ? Number(formData.giaBan1) : 0,
+      giaBan2: formData.giaBan2 ? Number(formData.giaBan2) : 0,
+      giaBan3: formData.giaBan3 ? Number(formData.giaBan3) : 0,
       giaNhap: formData.giaNhap ? Number(formData.giaNhap) : 0,
       tonKho: formData.tonKho ? Number(formData.tonKho) : 0,
     }
@@ -109,8 +124,10 @@ function HangHoaPage({ t }) {
       maHang: item.maHang || '',
       tenHang: item.tenHang || '',
       maNhomHang: item.maNhomHang || '',
-      dvt: item.dvt || '',
-      giaBan: item.giaBan || '',
+      maDvt: item.maDvt || item.MADVT || '',
+      giaBan1: item.giaBan1 || '',
+      giaBan2: item.giaBan2 || '',
+      giaBan3: item.giaBan3 || item.giaBan || '',
       giaNhap: item.giaNhap || '',
       tonKho: item.tonKho || '',
       ghiChu: item.ghiChu || '',
@@ -151,7 +168,7 @@ function HangHoaPage({ t }) {
     }
   }
 
-  // Nhóm các nhóm hàng theo nhóm chủ để hiển thị cực kỳ trực quan
+  // Nhóm các nhóm hàng theo nhóm chủ
   const groupsByNhomChu = nhomHangItems.reduce((acc, current) => {
     const key = current.tenNhomChu || 'Khác'
     if (!acc[key]) {
@@ -160,6 +177,23 @@ function HangHoaPage({ t }) {
     acc[key].push(current)
     return acc
   }, {})
+
+  // Tìm thông tin bộ quy đổi đang được chọn để hiển thị nhãn giá tự động
+  const selectedDvtConfig = unitConversionsItems.find(
+    (d) => d.MADVT === formData.maDvt || d.maDvt === formData.maDvt
+  )
+
+  const labelDvt1 = selectedDvtConfig
+    ? `${t.fields.giaBan1.split('(')[0]} (${selectedDvtConfig.DVT1 || selectedDvtConfig.dvt1})`
+    : t.fields.giaBan1
+
+  const labelDvt2 = selectedDvtConfig
+    ? `${t.fields.giaBan2.split('(')[0]} (${selectedDvtConfig.DVT2 || selectedDvtConfig.dvt2})`
+    : t.fields.giaBan2
+
+  const labelDvt3 = selectedDvtConfig
+    ? `${t.fields.giaBan3.split('(')[0]} (${selectedDvtConfig.DVT3 || selectedDvtConfig.dvt3})`
+    : t.fields.giaBan3
 
   return (
     <section className="unit-page">
@@ -182,7 +216,7 @@ function HangHoaPage({ t }) {
                 value={formData.maHang}
                 onChange={handleChange}
                 placeholder={t.placeholders.maHang}
-                disabled={!!editingItem} // Không cho sửa mã khi edit
+                disabled={!!editingItem}
               />
             </label>
 
@@ -220,23 +254,60 @@ function HangHoaPage({ t }) {
 
             <label>
               {t.fields.dvt}
-              <input
-                name="dvt"
-                value={formData.dvt}
+              <select
+                name="maDvt"
+                value={formData.maDvt}
                 onChange={handleChange}
-                placeholder={t.placeholders.dvt}
                 required
+                style={{ background: '#fff', border: '1px solid #ccc', borderRadius: '4px', padding: '0.5rem', fontWeight: 'bold' }}
+              >
+                <option value="">{t.selectDvt || 'Chọn bộ quy đổi ĐVT'}</option>
+                {unitConversionsItems.map((item) => {
+                  const id = item.MADVT || item.maDvt
+                  const d1 = item.DVT1 || item.dvt1
+                  const d2 = item.DVT2 || item.dvt2
+                  const d3 = item.DVT3 || item.dvt3
+                  return (
+                    <option key={id} value={id}>
+                      [{id}] {d1} → {d2} → {d3}
+                    </option>
+                  )
+                })}
+              </select>
+            </label>
+
+            <label>
+              <span style={{ color: '#0d9488', fontWeight: 'bold' }}>{labelDvt1}</span>
+              <input
+                type="number"
+                name="giaBan1"
+                value={formData.giaBan1}
+                onChange={handleChange}
+                placeholder="0"
+                min="0"
               />
             </label>
 
             <label>
-              {t.fields.giaBan}
+              <span style={{ color: '#0d9488', fontWeight: 'bold' }}>{labelDvt2}</span>
               <input
                 type="number"
-                name="giaBan"
-                value={formData.giaBan}
+                name="giaBan2"
+                value={formData.giaBan2}
                 onChange={handleChange}
-                placeholder={t.placeholders.giaBan}
+                placeholder="0"
+                min="0"
+              />
+            </label>
+
+            <label>
+              <span style={{ color: '#0d9488', fontWeight: 'bold' }}>{labelDvt3}</span>
+              <input
+                type="number"
+                name="giaBan3"
+                value={formData.giaBan3}
+                onChange={handleChange}
+                placeholder="0"
                 min="0"
               />
             </label>
@@ -310,8 +381,8 @@ function HangHoaPage({ t }) {
                 <th>{t.fields.maHang}</th>
                 <th>{t.fields.tenHang}</th>
                 <th>{t.fields.nhomHang}</th>
-                <th>{t.fields.dvt}</th>
-                <th>{t.fields.giaBan}</th>
+                <th>Quy cách quy đổi</th>
+                <th>Bảng giá sỉ lẻ</th>
                 <th>{t.fields.tonKho}</th>
                 <th>{t.actions}</th>
               </tr>
@@ -330,9 +401,28 @@ function HangHoaPage({ t }) {
                       <div>{item.tenNhomHang}</div>
                       <small style={{ opacity: 0.7 }}>{item.tenNhomChu}</small>
                     </td>
-                    <td>{item.dvt}</td>
-                    <td>{Number(item.giaBan).toLocaleString('vi-VN')}</td>
-                    <td>{item.tonKho}</td>
+                    <td>
+                      {item.dvt1 ? (
+                        <div>
+                          <strong>{item.dvt1}</strong> ({item.qc1} {item.dvt2})<br />
+                          ↳ <strong>{item.dvt2}</strong> ({item.qc2} {item.dvt3})
+                        </div>
+                      ) : (
+                        item.dvt || item.dvt3 || 'Chưa quy đổi'
+                      )}
+                    </td>
+                    <td>
+                      {item.dvt1 ? (
+                        <div style={{ fontSize: '0.9rem' }}>
+                          <div><strong>{item.dvt1}</strong>: {Number(item.giaBan1 || 0).toLocaleString('vi-VN')} đ</div>
+                          <div><strong>{item.dvt2}</strong>: {Number(item.giaBan2 || 0).toLocaleString('vi-VN')} đ</div>
+                          <div><strong>{item.dvt3}</strong>: {Number(item.giaBan3 || 0).toLocaleString('vi-VN')} đ</div>
+                        </div>
+                      ) : (
+                        <div>{Number(item.giaBan || item.giaBan3 || 0).toLocaleString('vi-VN')} đ</div>
+                      )}
+                    </td>
+                    <td><strong>{item.tonKho}</strong> {item.dvt3 || item.dvt}</td>
                     <td>
                       <div className="unit-row-actions">
                         <button type="button" onClick={() => handleEdit(item)}>

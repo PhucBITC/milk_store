@@ -2,7 +2,6 @@ package com.milkstore.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public class HangHoaRequest {
@@ -15,12 +14,17 @@ public class HangHoaRequest {
     @NotBlank(message = "MANHOMHANG is required")
     private String maNhomHang;
 
-    @NotBlank(message = "DVT is required")
-    private String dvt;
+    @NotBlank(message = "MADVT is required")
+    private String maDvt;
 
-    @NotNull(message = "GIABAN is required")
-    @Min(value = 0, message = "GIABAN must be positive or zero")
-    private BigDecimal giaBan;
+    @Min(value = 0, message = "GIABAN1 must be positive or zero")
+    private BigDecimal giaBan1;
+
+    @Min(value = 0, message = "GIABAN2 must be positive or zero")
+    private BigDecimal giaBan2;
+
+    @Min(value = 0, message = "GIABAN3 must be positive or zero")
+    private BigDecimal giaBan3;
 
     private BigDecimal giaNhap;
 
@@ -54,20 +58,36 @@ public class HangHoaRequest {
         this.maNhomHang = maNhomHang;
     }
 
-    public String getDvt() {
-        return dvt;
+    public String getMaDvt() {
+        return maDvt;
     }
 
-    public void setDvt(String dvt) {
-        this.dvt = dvt;
+    public void setMaDvt(String maDvt) {
+        this.maDvt = maDvt;
     }
 
-    public BigDecimal getGiaBan() {
-        return giaBan;
+    public BigDecimal getGiaBan1() {
+        return giaBan1;
     }
 
-    public void setGiaBan(BigDecimal giaBan) {
-        this.giaBan = giaBan;
+    public void setGiaBan1(BigDecimal giaBan1) {
+        this.giaBan1 = giaBan1;
+    }
+
+    public BigDecimal getGiaBan2() {
+        return giaBan2;
+    }
+
+    public void setGiaBan2(BigDecimal giaBan2) {
+        this.giaBan2 = giaBan2;
+    }
+
+    public BigDecimal getGiaBan3() {
+        return giaBan3;
+    }
+
+    public void setGiaBan3(BigDecimal giaBan3) {
+        this.giaBan3 = giaBan3;
     }
 
     public BigDecimal getGiaNhap() {

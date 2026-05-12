@@ -13,13 +13,13 @@ public class UnitConversion {
     @Column(name = "MADVT", nullable = false, length = 50)
     private String maDvt;
 
-    @Column(name = "DVT1", nullable = false, length = 100)
+    @Column(name = "DVT1", nullable = false, length = 100, columnDefinition = "NVARCHAR(100)")
     private String dvt1;
 
-    @Column(name = "DVT2", nullable = false, length = 100)
+    @Column(name = "DVT2", nullable = false, length = 100, columnDefinition = "NVARCHAR(100)")
     private String dvt2;
 
-    @Column(name = "DVT3", nullable = false, length = 100)
+    @Column(name = "DVT3", nullable = false, length = 100, columnDefinition = "NVARCHAR(100)")
     private String dvt3;
 
     @Column(name = "QC1", nullable = false)

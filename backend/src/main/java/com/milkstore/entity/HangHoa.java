@@ -25,11 +25,18 @@ public class HangHoa {
     @JoinColumn(name = "MANHOMHANG", nullable = false)
     private NhomHang nhomHang;
 
-    @Column(name = "DVT", nullable = false, length = 50, columnDefinition = "NVARCHAR(50)")
-    private String dvt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "MADVT", nullable = false)
+    private UnitConversion unitConversion;
 
-    @Column(name = "GIABAN", precision = 18, scale = 2)
-    private BigDecimal giaBan;
+    @Column(name = "GIABAN1", precision = 18, scale = 2)
+    private BigDecimal giaBan1; // Giá bán Thùng (DVT1)
+
+    @Column(name = "GIABAN2", precision = 18, scale = 2)
+    private BigDecimal giaBan2; // Giá bán Lốc (DVT2)
+
+    @Column(name = "GIABAN3", precision = 18, scale = 2)
+    private BigDecimal giaBan3; // Giá bán Hộp lẻ cơ sở (DVT3)
 
     @Column(name = "GIANHAP", precision = 18, scale = 2)
     private BigDecimal giaNhap;
@@ -70,20 +77,36 @@ public class HangHoa {
         this.nhomHang = nhomHang;
     }
 
-    public String getDvt() {
-        return dvt;
+    public UnitConversion getUnitConversion() {
+        return unitConversion;
     }
 
-    public void setDvt(String dvt) {
-        this.dvt = dvt;
+    public void setUnitConversion(UnitConversion unitConversion) {
+        this.unitConversion = unitConversion;
     }
 
-    public BigDecimal getGiaBan() {
-        return giaBan;
+    public BigDecimal getGiaBan1() {
+        return giaBan1;
     }
 
-    public void setGiaBan(BigDecimal giaBan) {
-        this.giaBan = giaBan;
+    public void setGiaBan1(BigDecimal giaBan1) {
+        this.giaBan1 = giaBan1;
+    }
+
+    public BigDecimal getGiaBan2() {
+        return giaBan2;
+    }
+
+    public void setGiaBan2(BigDecimal giaBan2) {
+        this.giaBan2 = giaBan2;
+    }
+
+    public BigDecimal getGiaBan3() {
+        return giaBan3;
+    }
+
+    public void setGiaBan3(BigDecimal giaBan3) {
+        this.giaBan3 = giaBan3;
     }
 
     public BigDecimal getGiaNhap() {

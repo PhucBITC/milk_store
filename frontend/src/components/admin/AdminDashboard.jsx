@@ -183,7 +183,7 @@ function SalesDashboard({ t }) {
   const [selectedProduct, setSelectedProduct] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState('')
 
-  // Tải danh sách Hàng hóa thực tế từ DB để bán
+  // Tải danh sách Hàng hóa thực tế từ DB kèm theo cấu trúc giá 3 tầng
   useEffect(() => {
     let isMounted = true
     getHangHoaList()
@@ -192,27 +192,31 @@ function SalesDashboard({ t }) {
           setDbProducts(res.data)
         }
       })
-      .catch(() => {
-        // Fallback demo
-      })
+      .catch(() => {})
     return () => {
       isMounted = false
     }
   }, [])
 
-  // Danh sách gợi ý: ưu tiên hàng thật từ DB, nếu rỗng thì dùng sample
+  // Gợi ý danh sách sản phẩm từ DB kèm theo cả 3 mức giá sỉ/lẻ
   const availableOptions = dbProducts.length > 0
     ? dbProducts.map((p) => ({
         code: p.maHang,
         name: p.tenHang,
-        unit: p.dvt,
-        price: Number(p.giaBan) || 0,
+        dvt1: p.dvt1,
+        dvt2: p.dvt2,
+        dvt3: p.dvt3 || p.dvt,
+        giaBan1: Number(p.giaBan1) || 0,
+        giaBan2: Number(p.giaBan2) || 0,
+        giaBan3: Number(p.giaBan3 || p.giaBan) || 0,
+        qc1: p.qc1 || 1,
+        qc2: p.qc2 || 1,
         warehouse: 'Kho Tổng',
-        note: p.ghiChu || '',
       }))
     : sampleProducts.map((p) => ({
         ...p,
-        price: Number(p.price.replace(/\./g, '')) || 0,
+        dvt3: p.unit,
+        giaBan3: Number(p.price.replace(/\./g, '')) || 0,
       }))
 
   const handleAddProduct = (code) => {
@@ -221,28 +225,63 @@ function SalesDashboard({ t }) {
     if (!found) return
 
     setCartItems((current) => {
-      const existingIndex = current.findIndex((item) => item.code === code)
-      if (existingIndex > -1) {
+      // Cách chuẩn xác nhất của máy POS siêu thị:
+      // Tìm xem mặt hàng này đã xuất hiện trong giỏ hàng ở BẤT KỲ dòng nào chưa.
+      // Nếu ĐÃ CÓ ít nhất 1 dòng của mặt hàng này, ta luôn ưu tiên CỘNG DỒN SỐ LƯỢNG vào dòng đầu tiên tìm thấy.
+      const existingRowIndex = current.findIndex((item) => item.code === code)
+
+      if (existingRowIndex > -1) {
         const updated = [...current]
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + 1,
+        updated[existingRowIndex] = {
+          ...updated[existingRowIndex],
+          quantity: updated[existingRowIndex].quantity + 1,
         }
         return updated
       }
-      return [...current, { ...found, quantity: 1 }]
+
+      // Nếu CHƯA CÓ dòng nào của mặt hàng này, tạo mới với quy cách lớn nhất khả dụng
+      const initialTier = found.dvt1 && found.giaBan1 > 0
+        ? 'DVT1'
+        : found.dvt2 && found.giaBan2 > 0
+        ? 'DVT2'
+        : 'DVT3'
+
+      // Sử dụng Date.now() làm cartRowId để đảm bảo mỗi dòng tách ra vĩnh viễn mang key duy nhất
+      const uniqueId = `${code}-${Date.now()}`
+      return [...current, { ...found, cartRowId: uniqueId, selectedTier: initialTier, quantity: 1 }]
     })
     setSelectedProduct('')
     setCheckoutMessage('')
   }
 
-  const handleUpdateQty = (code, delta) => {
+  // Chức năng "Tách dòng" (Split row) cực kỳ đột phá:
+  // Cho phép nhân viên bấm nút tách dòng để chèn thêm 1 dòng độc lập cho chính mặt hàng đó nhằm bán quy cách khác
+  const handleSplitRow = (itemToSplit) => {
+    setCartItems((current) => {
+      const index = current.findIndex((item) => item.cartRowId === itemToSplit.cartRowId)
+      if (index === -1) return current
+
+      const updated = [...current]
+      // Chèn thêm 1 dòng ngay bên dưới dòng hiện tại, mặc định số lượng = 1 và ở quy cách cơ sở (DVT3)
+      const newRowUniqueId = `${itemToSplit.code}-${Date.now()}`
+      const newRow = {
+        ...itemToSplit,
+        cartRowId: newRowUniqueId,
+        selectedTier: 'DVT3',
+        quantity: 1,
+      }
+
+      updated.splice(index + 1, 0, newRow)
+      return updated
+    })
+  }
+
+  const handleUpdateQty = (cartRowId, delta) => {
     setCartItems((current) => {
       return current
         .map((item) => {
-          if (item.code === code) {
-            const newQty = item.quantity + delta
-            return { ...item, quantity: newQty }
+          if (item.cartRowId === cartRowId) {
+            return { ...item, quantity: item.quantity + delta }
           }
           return item
         })
@@ -250,18 +289,68 @@ function SalesDashboard({ t }) {
     })
   }
 
-  const totalPrice = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const handleSwitchTier = (cartRowId, newTier) => {
+    setCartItems((current) => {
+      return current.map((item) => {
+        if (item.cartRowId === cartRowId) {
+          return { ...item, selectedTier: newTier }
+        }
+        return item
+      })
+    })
+  }
+
+  // Tính toán đơn giá áp dụng và số lượng trừ kho cơ sở cho từng dòng
+  const getLineDetails = (item) => {
+    const unitLabel = item.selectedTier === 'DVT1'
+      ? item.dvt1
+      : item.selectedTier === 'DVT2'
+      ? item.dvt2
+      : item.dvt3
+
+    const appliedPrice = item.selectedTier === 'DVT1'
+      ? item.giaBan1
+      : item.selectedTier === 'DVT2'
+      ? item.giaBan2
+      : item.giaBan3
+
+    const baseQtyMultiplier = item.selectedTier === 'DVT1'
+      ? item.qc1 * item.qc2
+      : item.selectedTier === 'DVT2'
+      ? item.qc2
+      : 1
+
+    const totalBaseQtyDecreased = item.quantity * baseQtyMultiplier
+
+    return { unitLabel, appliedPrice, totalBaseQtyDecreased, baseUnitName: item.dvt3 }
+  }
+
+  const totalPrice = cartItems.reduce((acc, item) => {
+    const { appliedPrice } = getLineDetails(item)
+    return acc + appliedPrice * item.quantity
+  }, 0)
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return
-    setCheckoutMessage(`Thanh toán thành công hóa đơn trị giá ${totalPrice.toLocaleString('vi-VN')} đ!`)
+    setCheckoutMessage(
+      `Thanh toán thành công đơn hàng đa quy cách trị giá ${totalPrice.toLocaleString('vi-VN')} đ!`
+    )
     setCartItems([])
   }
 
   return (
     <>
       {checkoutMessage ? (
-        <div style={{ padding: '1rem', background: '#d4edda', color: '#155724', borderRadius: '4px', marginBottom: '1rem', fontWeight: 'bold' }}>
+        <div
+          style={{
+            padding: '1rem',
+            background: '#d4edda',
+            color: '#155724',
+            borderRadius: '4px',
+            marginBottom: '1rem',
+            fontWeight: 'bold',
+          }}
+        >
           🎉 {checkoutMessage}
         </div>
       ) : null}
@@ -277,7 +366,10 @@ function SalesDashboard({ t }) {
 
       <section className="sales-layout">
         <div className="sales-main">
-          <div className="sales-toolbar" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            className="sales-toolbar"
+            style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}
+          >
             <div>
               <h2>{t.admin.quickActions[0]}</h2>
               <p>{t.admin.salesDescription}</p>
@@ -288,14 +380,27 @@ function SalesDashboard({ t }) {
               <select
                 value={selectedProduct}
                 onChange={(e) => handleAddProduct(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc', background: '#fff', color: '#333', fontWeight: 'bold' }}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  background: '#fff',
+                  color: '#333',
+                  fontWeight: 'bold',
+                }}
               >
                 <option value="">🔍 Chọn sản phẩm thêm vào hóa đơn...</option>
-                {availableOptions.map((opt) => (
-                  <option key={opt.code} value={opt.code}>
-                    [{opt.code}] {opt.name} - {opt.price.toLocaleString('vi-VN')} đ/{opt.unit}
-                  </option>
-                ))}
+                {availableOptions.map((opt) => {
+                  const defaultLabel = opt.dvt1 && opt.giaBan1 > 0
+                    ? `${opt.dvt1}: ${opt.giaBan1.toLocaleString()} đ`
+                    : `${opt.dvt3}: ${opt.giaBan3.toLocaleString()} đ`
+                  return (
+                    <option key={opt.code} value={opt.code}>
+                      [{opt.code}] {opt.name} - ({defaultLabel})
+                    </option>
+                  )
+                })}
               </select>
             </div>
           </div>
@@ -307,59 +412,143 @@ function SalesDashboard({ t }) {
                   <th>STT</th>
                   <th>Mã hàng</th>
                   <th>Tên hàng</th>
-                  <th>Đvt</th>
+                  <th>Quy cách bán (ĐVT)</th>
                   <th>Số lượng</th>
-                  <th>Đơn giá</th>
+                  <th>Đơn giá áp dụng</th>
                   <th>Thành tiền</th>
+                  <th>Ý nghĩa trừ kho</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {cartItems.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>
                       {t.admin.emptyText || 'Hóa đơn chưa có sản phẩm. Vui lòng chọn sản phẩm ở trên.'}
                     </td>
                   </tr>
                 ) : (
-                  cartItems.map((item, index) => (
-                    <tr key={item.code}>
-                      <td>{index + 1}</td>
-                      <td><strong>{item.code}</strong></td>
-                      <td>{item.name}</td>
-                      <td>{item.unit}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateQty(item.code, -1)}
-                            style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: '#eee', border: '1px solid #ccc', borderRadius: '2px' }}
+                  cartItems.map((item, index) => {
+                    const { appliedPrice, totalBaseQtyDecreased, baseUnitName } = getLineDetails(item)
+                    return (
+                      <tr key={item.cartRowId}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <strong>{item.code}</strong>
+                        </td>
+                        <td>{item.name}</td>
+                        <td>
+                          {/* Chuyển đổi linh hoạt quy cách đóng gói trực tiếp trên dòng giỏ hàng */}
+                          <select
+                            value={item.selectedTier}
+                            onChange={(e) => handleSwitchTier(item.cartRowId, e.target.value)}
+                            style={{
+                              padding: '0.2rem',
+                              borderRadius: '2px',
+                              fontWeight: 'bold',
+                              border: '1px solid #0d9488',
+                              background: '#f0fdfa',
+                              color: '#0f766e',
+                            }}
                           >
-                            -
-                          </button>
-                          <strong>{item.quantity}</strong>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateQty(item.code, 1)}
-                            style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: '#eee', border: '1px solid #ccc', borderRadius: '2px' }}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </td>
-                      <td>{item.price.toLocaleString('vi-VN')}</td>
-                      <td><strong>{(item.price * item.quantity).toLocaleString('vi-VN')}</strong></td>
-                      <td>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateQty(item.code, -item.quantity)}
-                          style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                            {item.dvt1 ? (
+                              <option value="DVT1">
+                                {item.dvt1} (Giá: {item.giaBan1?.toLocaleString()} đ)
+                              </option>
+                            ) : null}
+                            {item.dvt2 ? (
+                              <option value="DVT2">
+                                {item.dvt2} (Giá: {item.giaBan2?.toLocaleString()} đ)
+                              </option>
+                            ) : null}
+                            <option value="DVT3">
+                              {item.dvt3} (Giá: {item.giaBan3?.toLocaleString()} đ)
+                            </option>
+                          </select>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateQty(item.cartRowId, -1)}
+                              style={{
+                                padding: '0.2rem 0.5rem',
+                                cursor: 'pointer',
+                                background: '#eee',
+                                border: '1px solid #ccc',
+                                borderRadius: '2px',
+                              }}
+                            >
+                              -
+                            </button>
+                            <strong>{item.quantity}</strong>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateQty(item.cartRowId, 1)}
+                              style={{
+                                padding: '0.2rem 0.5rem',
+                                cursor: 'pointer',
+                                background: '#eee',
+                                border: '1px solid #ccc',
+                                borderRadius: '2px',
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td>{appliedPrice.toLocaleString('vi-VN')}</td>
+                        <td>
+                          <strong style={{ color: '#0d9488' }}>
+                            {(appliedPrice * item.quantity).toLocaleString('vi-VN')}
+                          </strong>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                            Ngầm trừ: <strong>{totalBaseQtyDecreased}</strong> {baseUnitName}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            {/* Nút tách dòng để bán nhiều quy cách đóng gói cho cùng mặt hàng */}
+                            {item.dvt1 || item.dvt2 ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSplitRow(item)}
+                                style={{
+                                  color: '#0284c7',
+                                  background: '#e0f2fe',
+                                  border: '1px solid #bae6fd',
+                                  borderRadius: '2px',
+                                  padding: '0.1rem 0.3rem',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 'bold',
+                                }}
+                                title="Chèn thêm dòng quy cách khác cho mặt hàng này"
+                              >
+                                + Tách dòng
+                              </button>
+                            ) : null}
+
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateQty(item.cartRowId, -item.quantity)}
+                              style={{
+                                color: 'red',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -399,7 +588,10 @@ function SalesDashboard({ t }) {
               className="pay-action"
               onClick={handleCheckout}
               disabled={cartItems.length === 0}
-              style={{ opacity: cartItems.length === 0 ? 0.5 : 1, cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer' }}
+              style={{
+                opacity: cartItems.length === 0 ? 0.5 : 1,
+                cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer',
+              }}
             >
               {t.admin.payNow || 'F12 Thanh toán'}
             </button>
