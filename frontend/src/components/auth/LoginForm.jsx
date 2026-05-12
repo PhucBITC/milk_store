@@ -1,33 +1,33 @@
 import { useState } from 'react'
 
 function LoginForm({ t, onLogin, onRegister }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [maTaiKhoan, setMaTaiKhoan] = useState('')
+  const [matKhau, setMatKhau] = useState('')
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    onLogin({ email: email.trim(), password })
+    onLogin({ maTaiKhoan: maTaiKhoan.trim(), matKhau })
   }
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <label>
-        {t.email}
+        {t.maTaiKhoan}
         <input
-          type="email"
-          placeholder={t.emailPlaceholder}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          type="text"
+          placeholder={t.maTaiKhoanPlaceholder}
+          value={maTaiKhoan}
+          onChange={(event) => setMaTaiKhoan(event.target.value)}
         />
       </label>
 
       <label>
-        {t.password}
+        {t.matKhau}
         <input
           type="password"
-          placeholder={t.passwordPlaceholder}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          placeholder={t.matKhauPlaceholder}
+          value={matKhau}
+          onChange={(event) => setMatKhau(event.target.value)}
         />
       </label>
 

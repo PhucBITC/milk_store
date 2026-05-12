@@ -19,12 +19,12 @@ export function getRegisteredAccount() {
   }
 }
 
-export function validateLogin(email, password) {
+export function validateLogin(maTaiKhoan, matKhau) {
   const account = getRegisteredAccount()
 
   if (!account) {
     return false
   }
 
-  return account.email === email && account.password === password
+  return account.maTaiKhoan === maTaiKhoan && account.matKhau === matKhau
 }

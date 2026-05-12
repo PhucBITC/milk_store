@@ -25,31 +25,40 @@ function App() {
     setActivePage(page)
   }
 
-  const handleRegister = ({ email, password }) => {
-    if (!email || !password) {
+  const handleRegister = ({ maTaiKhoan, tenTaiKhoan, matKhau }) => {
+    if (!maTaiKhoan || !tenTaiKhoan || !matKhau) {
       setAuthMessage(t.authMessages.missingFields)
       return
     }
 
-    registerAccount({ email, password })
+    registerAccount({
+      maTaiKhoan,
+      tenTaiKhoan,
+      matKhau,
+      phanQuyen: 1,
+      maCongTy: '01',
+      maMay: '00',
+      hienHd: 1,
+      maCuaHang: '',
+    })
     setAuthMessage(t.authMessages.registered)
     setActivePage('login')
   }
 
-  const handleLogin = ({ email, password }) => {
-    if (!email || !password) {
+  const handleLogin = ({ maTaiKhoan, matKhau }) => {
+    if (!maTaiKhoan || !matKhau) {
       setAuthMessage(t.authMessages.missingFields)
       return
     }
 
-    if (!validateLogin(email, password)) {
+    if (!validateLogin(maTaiKhoan, matKhau)) {
       setAuthMessage(t.authMessages.invalidLogin)
       return
     }
 
     window.alert(t.authMessages.loginSuccess)
     setAuthMessage('')
-    setCurrentUser({ email })
+    setCurrentUser({ maTaiKhoan })
   }
 
   const handleLogout = () => {
@@ -60,7 +69,7 @@ function App() {
   if (currentUser) {
     return (
       <AdminDashboard
-        accountEmail={currentUser.email}
+        accountEmail={currentUser.maTaiKhoan}
         language={language}
         t={t}
         onLanguageChange={handleLanguageChange}

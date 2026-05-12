@@ -1,33 +1,48 @@
 import { useState } from 'react'
 
 function RegisterForm({ t, onLogin, onRegister }) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [maTaiKhoan, setMaTaiKhoan] = useState('')
+  const [tenTaiKhoan, setTenTaiKhoan] = useState('')
+  const [matKhau, setMatKhau] = useState('')
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    onRegister({ email: email.trim(), password })
+    onRegister({
+      maTaiKhoan: maTaiKhoan.trim(),
+      tenTaiKhoan: tenTaiKhoan.trim(),
+      matKhau,
+    })
   }
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <label>
-        {t.email}
+        {t.maTaiKhoan}
         <input
-          type="email"
-          placeholder={t.emailPlaceholder}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          type="text"
+          placeholder={t.maTaiKhoanPlaceholder}
+          value={maTaiKhoan}
+          onChange={(event) => setMaTaiKhoan(event.target.value)}
         />
       </label>
 
       <label>
-        {t.password}
+        {t.tenTaiKhoan}
+        <input
+          type="text"
+          placeholder={t.tenTaiKhoanPlaceholder}
+          value={tenTaiKhoan}
+          onChange={(event) => setTenTaiKhoan(event.target.value)}
+        />
+      </label>
+
+      <label>
+        {t.matKhau}
         <input
           type="password"
-          placeholder={t.passwordPlaceholder}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          placeholder={t.matKhauPlaceholder}
+          value={matKhau}
+          onChange={(event) => setMatKhau(event.target.value)}
         />
       </label>
 
