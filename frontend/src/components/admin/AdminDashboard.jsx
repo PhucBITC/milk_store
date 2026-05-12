@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
+import LanguageSwitcher from '../auth/LanguageSwitcher'
+
 const sampleProducts = [
   {
     code: 'SUA-001',
@@ -46,6 +50,9 @@ function AdminDashboard({
   onLanguageChange,
   onLogout,
 }) {
+  const [activeMenuIndex, setActiveMenuIndex] = useState(2)
+  const isUnitConversionPage = activeMenuIndex === 1
+
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar" aria-label="Admin navigation">
@@ -62,7 +69,8 @@ function AdminDashboard({
             <button
               key={item}
               type="button"
-              className={index === 2 ? 'active' : ''}
+              className={activeMenuIndex === index ? 'active' : ''}
+              onClick={() => setActiveMenuIndex(index)}
             >
               <AdminIcon type={menuIconTypes[index]} />
               {item}
@@ -75,7 +83,7 @@ function AdminDashboard({
         <header className="admin-topbar">
           <div>
             <p className="eyebrow">{t.admin.title}</p>
-            <h1>{t.admin.dashboardTitle}</h1>
+            <h1>{isUnitConversionPage ? 'Quản lý đơn vị tính' : t.admin.dashboardTitle}</h1>
           </div>
 
           <div className="admin-user">
@@ -91,97 +99,103 @@ function AdminDashboard({
           </div>
         </header>
 
-        <section className="admin-stats" aria-label="Dashboard stats">
-          {adminStats.map((stat) => (
-            <article key={stat.label}>
-              <strong>{stat.value}</strong>
-              <span>{stat.label}</span>
-            </article>
-          ))}
-        </section>
+        {isUnitConversionPage ? (
+          <UnitConversionPage />
+        ) : (
+          <>
+            <section className="admin-stats" aria-label="Dashboard stats">
+              {adminStats.map((stat) => (
+                <article key={stat.label}>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
+                </article>
+              ))}
+            </section>
 
-        <section className="sales-layout">
-          <div className="sales-main">
-            <div className="sales-toolbar">
-              <div>
-                <h2>{t.admin.quickActions[0]}</h2>
-                <p>{t.admin.salesDescription}</p>
-              </div>
+            <section className="sales-layout">
+              <div className="sales-main">
+                <div className="sales-toolbar">
+                  <div>
+                    <h2>{t.admin.quickActions[0]}</h2>
+                    <p>{t.admin.salesDescription}</p>
+                  </div>
 
-              <div className="toolbar-actions">
-                {t.admin.quickActions.slice(1, 4).map((action) => (
-                  <button key={action} type="button">
-                    {action}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="invoice-area" aria-label={t.admin.title}>
-              <table>
-                <thead>
-                  <tr>
-                    {t.admin.columns.map((column) => (
-                      <th key={column}>{column}</th>
+                  <div className="toolbar-actions">
+                    {t.admin.quickActions.slice(1, 4).map((action) => (
+                      <button key={action} type="button">
+                        {action}
+                      </button>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sampleProducts.map((product, index) => (
-                    <tr key={product.code}>
-                      <td>{index + 1}</td>
-                      <td>{product.code}</td>
-                      <td>{product.name}</td>
-                      <td>{product.unit}</td>
-                      <td>{product.warehouse}</td>
-                      <td>{product.quantity}</td>
-                      <td>{product.price}</td>
-                      <td>{product.total}</td>
-                      <td>{product.note}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </div>
+                </div>
 
-          <aside className="checkout-panel" aria-label={t.admin.payment}>
-            <div className="checkout-header">
-              <span>{t.admin.payment}</span>
-              <strong>1.200.000</strong>
-            </div>
+                <div className="invoice-area" aria-label={t.admin.title}>
+                  <table>
+                    <thead>
+                      <tr>
+                        {t.admin.columns.map((column) => (
+                          <th key={column}>{column}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sampleProducts.map((product, index) => (
+                        <tr key={product.code}>
+                          <td>{index + 1}</td>
+                          <td>{product.code}</td>
+                          <td>{product.name}</td>
+                          <td>{product.unit}</td>
+                          <td>{product.warehouse}</td>
+                          <td>{product.quantity}</td>
+                          <td>{product.price}</td>
+                          <td>{product.total}</td>
+                          <td>{product.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-            <label className="admin-checkbox">
-              <input type="checkbox" />
-              {t.admin.noPrint}
-            </label>
+              <aside className="checkout-panel" aria-label={t.admin.payment}>
+                <div className="checkout-header">
+                  <span>{t.admin.payment}</span>
+                  <strong>1.200.000</strong>
+                </div>
 
-            <div className="discount-grid">
-              <label>
-                {t.admin.discount}
-                <input value="0" readOnly />
-              </label>
-              <label>
-                {t.admin.percentDiscount}
-                <input value="0%" readOnly />
-              </label>
-            </div>
+                <label className="admin-checkbox">
+                  <input type="checkbox" />
+                  {t.admin.noPrint}
+                </label>
 
-            <p className="amount-text">{t.admin.amountInWords}</p>
+                <div className="discount-grid">
+                  <label>
+                    {t.admin.discount}
+                    <input value="0" readOnly />
+                  </label>
+                  <label>
+                    {t.admin.percentDiscount}
+                    <input value="0%" readOnly />
+                  </label>
+                </div>
 
-            <div className="payment-actions">
-              <button type="button" className="secondary-admin-action">
-                {t.admin.saveOrder}
-              </button>
-              <button type="button" className="secondary-admin-action">
-                {t.admin.preview}
-              </button>
-              <button type="button" className="pay-action">
-                {t.admin.payNow}
-              </button>
-            </div>
-          </aside>
-        </section>
+                <p className="amount-text">{t.admin.amountInWords}</p>
+
+                <div className="payment-actions">
+                  <button type="button" className="secondary-admin-action">
+                    {t.admin.saveOrder}
+                  </button>
+                  <button type="button" className="secondary-admin-action">
+                    {t.admin.preview}
+                  </button>
+                  <button type="button" className="pay-action">
+                    {t.admin.payNow}
+                  </button>
+                </div>
+              </aside>
+            </section>
+          </>
+        )}
       </section>
     </main>
   )
@@ -269,4 +283,3 @@ function AdminIcon({ type }) {
 }
 
 export default AdminDashboard
-import LanguageSwitcher from '../auth/LanguageSwitcher'

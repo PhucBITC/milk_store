@@ -2,7 +2,7 @@ import { useState } from 'react'
 import AdminDashboard from './components/admin/AdminDashboard'
 import AuthCard from './components/auth/AuthCard'
 import BrandPanel from './components/auth/BrandPanel'
-import { registerAccount, validateLogin } from './authStorage'
+import { loginUser, registerUser } from './services/authService'
 import { translations } from './translations'
 import './App.css'
 
@@ -25,7 +25,7 @@ function App() {
     setActivePage(page)
   }
 
-  const handleRegister = (account) => {
+  const handleRegister = async (account) => {
     const {
       maTaiKhoan,
       tenTaiKhoan,
@@ -48,33 +48,37 @@ function App() {
       return
     }
 
-    registerAccount({
-      maTaiKhoan,
-      tenTaiKhoan,
-      matKhau,
-      phanQuyen,
-      maCongTy,
-      hienHd,
-      maCuaHang,
-    })
-    setAuthMessage(t.authMessages.registered)
-    setActivePage('login')
+    try {
+      await registerUser({
+        maTaiKhoan,
+        tenTaiKhoan,
+        matKhau,
+        phanQuyen,
+        maCongTy,
+        hienHd,
+        maCuaHang,
+      })
+      setAuthMessage(t.authMessages.registered)
+      setActivePage('login')
+    } catch (error) {
+      setAuthMessage(error.response?.data?.message || t.authMessages.registerFailed)
+    }
   }
 
-  const handleLogin = ({ maTaiKhoan, matKhau }) => {
+  const handleLogin = async ({ maTaiKhoan, matKhau }) => {
     if (!maTaiKhoan || !matKhau) {
       setAuthMessage(t.authMessages.missingFields)
       return
     }
 
-    if (!validateLogin(maTaiKhoan, matKhau)) {
+    try {
+      const response = await loginUser({ maTaiKhoan, matKhau })
+      window.alert(t.authMessages.loginSuccess)
+      setAuthMessage('')
+      setCurrentUser(response.data.user)
+    } catch {
       setAuthMessage(t.authMessages.invalidLogin)
-      return
     }
-
-    window.alert(t.authMessages.loginSuccess)
-    setAuthMessage('')
-    setCurrentUser({ maTaiKhoan })
   }
 
   const handleLogout = () => {

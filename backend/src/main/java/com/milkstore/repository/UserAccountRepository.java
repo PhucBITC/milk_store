@@ -1,5 +1,6 @@
-package com.milkstore.user;
+package com.milkstore.repository;
 
+import com.milkstore.entity.UserAccount;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

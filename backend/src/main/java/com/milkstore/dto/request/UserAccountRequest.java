@@ -1,43 +1,26 @@
-package com.milkstore.user;
+package com.milkstore.dto.request;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-@Entity
-@Table(name = "nguoi_dung")
-public class UserAccount {
+public class UserAccountRequest {
 
-    @Id
-    @Column(name = "ma_tai_khoan", nullable = false, length = 50)
-    private String maTaiKhoan;
-
-    @Column(name = "ten_tai_khoan", nullable = false, length = 150)
+    @NotBlank(message = "TEN_TAI_KHOAN is required")
     private String tenTaiKhoan;
 
-    @Column(name = "mat_khau", nullable = false)
+    @NotBlank(message = "MAT_KHAU is required")
     private String matKhau;
 
-    @Column(name = "phan_quyen", nullable = false)
-    private Integer phanQuyen = 1;
+    @NotNull(message = "PHAN_QUYEN is required")
+    private Integer phanQuyen;
 
-    @Column(name = "ma_cong_ty", nullable = false, length = 20)
-    private String maCongTy = "01";
+    @NotBlank(message = "MA_CONG_TY is required")
+    private String maCongTy;
 
-    @Column(name = "hien_hd", nullable = false)
-    private Integer hienHd = 1;
+    @NotNull(message = "HIEN_HD is required")
+    private Integer hienHd;
 
-    @Column(name = "ma_cua_hang", length = 20)
     private String maCuaHang;
-
-    public String getMaTaiKhoan() {
-        return maTaiKhoan;
-    }
-
-    public void setMaTaiKhoan(String maTaiKhoan) {
-        this.maTaiKhoan = maTaiKhoan;
-    }
 
     public String getTenTaiKhoan() {
         return tenTaiKhoan;

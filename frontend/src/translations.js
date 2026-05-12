@@ -55,6 +55,7 @@ export const translations = {
     authMessages: {
       missingFields: 'Vui lòng nhập đầy đủ thông tin tài khoản.',
       registered: 'Đăng ký thành công. Bạn có thể đăng nhập bằng tài khoản vừa tạo.',
+      registerFailed: 'Không thể đăng ký tài khoản.',
       invalidLogin: 'Mã tài khoản hoặc mật khẩu không đúng.',
       loginSuccess: 'Login thành công',
     },
@@ -154,6 +155,7 @@ export const translations = {
     authMessages: {
       missingFields: 'Please enter all account information.',
       registered: 'Registration successful. You can now sign in with this account.',
+      registerFailed: 'Could not register account.',
       invalidLogin: 'Account code or password is incorrect.',
       loginSuccess: 'Login successful',
     },
