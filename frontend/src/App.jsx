@@ -25,8 +25,25 @@ function App() {
     setActivePage(page)
   }
 
-  const handleRegister = ({ maTaiKhoan, tenTaiKhoan, matKhau }) => {
-    if (!maTaiKhoan || !tenTaiKhoan || !matKhau) {
+  const handleRegister = (account) => {
+    const {
+      maTaiKhoan,
+      tenTaiKhoan,
+      matKhau,
+      phanQuyen,
+      maCongTy,
+      hienHd,
+      maCuaHang,
+    } = account
+
+    if (
+      !maTaiKhoan ||
+      !tenTaiKhoan ||
+      !matKhau ||
+      phanQuyen === '' ||
+      !maCongTy ||
+      hienHd === ''
+    ) {
       setAuthMessage(t.authMessages.missingFields)
       return
     }
@@ -35,11 +52,10 @@ function App() {
       maTaiKhoan,
       tenTaiKhoan,
       matKhau,
-      phanQuyen: 1,
-      maCongTy: '01',
-      maMay: '00',
-      hienHd: 1,
-      maCuaHang: '',
+      phanQuyen,
+      maCongTy,
+      hienHd,
+      maCuaHang,
     })
     setAuthMessage(t.authMessages.registered)
     setActivePage('login')

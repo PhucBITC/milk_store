@@ -25,9 +25,6 @@ public class UserAccount {
     @Column(name = "ma_cong_ty", nullable = false, length = 20)
     private String maCongTy = "01";
 
-    @Column(name = "ma_may", nullable = false, length = 20)
-    private String maMay = "00";
-
     @Column(name = "hien_hd", nullable = false)
     private Integer hienHd = 1;
 
@@ -72,14 +69,6 @@ public class UserAccount {
 
     public void setMaCongTy(String maCongTy) {
         this.maCongTy = maCongTy;
-    }
-
-    public String getMaMay() {
-        return maMay;
-    }
-
-    public void setMaMay(String maMay) {
-        this.maMay = maMay;
     }
 
     public Integer getHienHd() {
