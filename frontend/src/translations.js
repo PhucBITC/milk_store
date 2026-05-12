@@ -48,6 +48,8 @@ export const translations = {
     },
     admin: {
       title: 'Bán hàng',
+      dashboardTitle: 'Bảng điều khiển bán hàng',
+      salesDescription: 'Quản lý sản phẩm, số lượng và giá bán trong hóa đơn.',
       userLabel: 'Admin',
       logout: 'Đăng xuất',
       menuItems: [
@@ -133,6 +135,8 @@ export const translations = {
     },
     admin: {
       title: 'Sales',
+      dashboardTitle: 'Sales dashboard',
+      salesDescription: 'Manage products, quantities, and prices in the invoice.',
       userLabel: 'Admin',
       logout: 'Log out',
       menuItems: [

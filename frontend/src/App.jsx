@@ -61,7 +61,9 @@ function App() {
     return (
       <AdminDashboard
         accountEmail={currentUser.email}
+        language={language}
         t={t}
+        onLanguageChange={handleLanguageChange}
         onLogout={handleLogout}
       />
     )
