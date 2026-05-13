@@ -53,7 +53,7 @@ body,
 .admin-nav-icon,
 .secondary-admin-action,
 .topbar-icon-button,
-.topbar-logout,
+.topbar-account-button,
 .admin-user button {
   color: #111 !important;
   background: #fff !important;
@@ -76,13 +76,6 @@ body,
   border-radius: 12px;
   object-fit: contain;
   background: #fff;
-}
-
-.topbar-avatar {
-  width: 46px !important;
-  height: 46px !important;
-  flex-basis: 46px;
-  border-radius: 999px !important;
 }
 
 .primary-action {
@@ -119,7 +112,7 @@ body,
 }
 
 .secondary-admin-action,
-.topbar-logout {
+.topbar-account-button {
   color: #111 !important;
   background: #f3f4f6 !important;
   border-color: var(--border-main) !important;
@@ -158,11 +151,9 @@ body,
 .form-header p,
 .admin-brand strong,
 .admin-brand small,
-.topbar-brand strong,
-.topbar-brand small,
 .topbar-title h1,
-.topbar-profile strong,
-.topbar-profile small,
+.account-menu-profile strong,
+.account-menu-profile span,
 .admin-nav a,
 .admin-stats strong,
 .admin-stats span,
@@ -216,7 +207,7 @@ th,
 .topbar-avatar,
 .primary-action,
 .pay-action,
-.topbar-logout,
+.topbar-account-button,
 .admin-nav a.active,
 .auth-switch button.active,
 .language-switcher button.active {

@@ -5,39 +5,10 @@
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 18px 48px rgba(31, 72, 67, 0.08);
   display: grid;
-  grid-template-columns: 220px minmax(150px, 240px) minmax(220px, 1fr) auto;
+  grid-template-columns: minmax(220px, 360px) minmax(220px, 1fr) auto;
   align-items: center;
   gap: 22px;
   padding: 16px 24px;
-}
-
-.topbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.topbar-brand strong,
-.topbar-brand small,
-.topbar-profile strong,
-.topbar-profile small {
-  display: block;
-}
-
-.topbar-brand strong {
-  color: #153b36;
-  font-size: 20px;
-  line-height: 1.05;
-}
-
-.topbar-brand small {
-  margin-top: 5px;
-  color: #b47d12;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .topbar-title {
@@ -68,7 +39,8 @@
 }
 
 .topbar-search svg,
-.topbar-icon-button svg {
+.topbar-icon-button svg,
+.topbar-account-button svg {
   width: 19px;
   height: 19px;
   stroke: currentColor;
@@ -128,62 +100,86 @@
   font-weight: 900;
 }
 
-.topbar-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  padding-left: 4px;
+.topbar-account {
+  position: relative;
 }
 
-.topbar-avatar {
+.topbar-account-button {
   width: 46px;
   height: 46px;
   display: inline-grid;
   place-items: center;
+  border: 1px solid rgba(29, 107, 97, 0.1);
   border-radius: 999px;
-  color: #fff;
-  background: #1d6b61;
-  font-weight: 900;
-  box-shadow: 0 10px 24px rgba(29, 107, 97, 0.22);
+  color: #111;
+  background: #fff;
+  cursor: pointer;
 }
 
-.topbar-profile strong {
-  max-width: 130px;
-  color: #153b36;
+.topbar-account-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 10;
+  min-width: 210px;
+  padding: 8px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+.account-menu-profile {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.account-menu-profile strong,
+.account-menu-profile span {
+  display: block;
+}
+
+.account-menu-profile strong {
+  max-width: 170px;
+  color: #111;
   font-size: 14px;
-  line-height: 1.1;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.topbar-profile small {
-  margin-top: 3px;
-  color: #526a66;
-  font-size: 11px;
-  font-weight: 900;
+.account-menu-profile span {
+  margin-top: 4px;
+  color: #555;
+  font-size: 12px;
 }
 
-.topbar-logout {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(29, 107, 97, 0.18);
-  border-radius: 8px;
-  color: #1d6b61;
-  background: #eef8f5;
+.account-menu-item {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  color: #111;
+  background: transparent;
   font: inherit;
-  font-weight: 900;
+  text-align: left;
   cursor: pointer;
+}
+
+.account-menu-item:hover {
+  background: #f3f4f6;
+}
+
+.account-menu-item.danger {
+  color: #dc2626;
 }
 
 @media (max-width: 1280px) {
   .admin-topbar {
     grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
-  }
-
-  .topbar-brand {
-    display: none;
   }
 
   .topbar-search {

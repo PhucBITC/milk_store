@@ -1,5 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
 import LanguageSwitcher from '../../auth/LanguageSwitcher'
-import BrandLogo from '../../shared/BrandLogo'
 import './AdminTopbar.css'
 
 function AdminTopbar({
@@ -10,18 +10,36 @@ function AdminTopbar({
   onLanguageChange,
   onLogout,
 }) {
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
+  const accountMenuRef = useRef(null)
   const displayName = accountEmail || 'Admin'
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) return undefined
+
+    const handlePointerDown = (event) => {
+      if (!accountMenuRef.current?.contains(event.target)) {
+        setIsAccountMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsAccountMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isAccountMenuOpen])
 
   return (
     <header className="admin-topbar">
-      <div className="topbar-brand" aria-label={t.brandName}>
-        <BrandLogo />
-        <div>
-          <strong>{t.brandName}</strong>
-          <small>{t.admin.title}</small>
-        </div>
-      </div>
-
       <div className="topbar-title">
         <h1>{currentTitle}</h1>
       </div>
@@ -47,19 +65,44 @@ function AdminTopbar({
           onChange={onLanguageChange}
         />
 
-        <div className="topbar-profile">
-          <BrandLogo className="topbar-avatar" />
-          <div>
-            <strong>{displayName}</strong>
-            <small>ADMIN</small>
-          </div>
-        </div>
+        <div className="topbar-account" ref={accountMenuRef}>
+          <button
+            type="button"
+            className="topbar-account-button"
+            onClick={() => setIsAccountMenuOpen((current) => !current)}
+            aria-label="Tài khoản"
+            aria-expanded={isAccountMenuOpen}
+          >
+            <AccountIcon />
+          </button>
 
-        <button type="button" className="topbar-logout" onClick={onLogout}>
-          {t.admin.logout}
-        </button>
+          {isAccountMenuOpen ? (
+            <div className="topbar-account-menu">
+              <div className="account-menu-profile">
+                <strong>{displayName}</strong>
+                <span>ADMIN</span>
+              </div>
+
+              <button type="button" className="account-menu-item">
+                Profile
+              </button>
+              <button type="button" className="account-menu-item danger" onClick={onLogout}>
+                {t.admin.logout}
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
+  )
+}
+
+function AccountIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <path d="M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
+    </svg>
   )
 }
 
