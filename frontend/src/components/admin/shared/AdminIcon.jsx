@@ -21,6 +21,20 @@
         <path d="M12 12.2V21" />
       </>
     ),
+    customer: (
+      <>
+        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+    supplier: (
+      <>
+        <path d="M3 7h11v10H3z" />
+        <path d="M14 10h4l3 3v4h-7z" />
+        <path d="M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+        <path d="M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      </>
+    ),
     warehouse: (
       <>
         <path d="M3 10 12 4l9 6" />

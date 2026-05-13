@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -24,11 +24,26 @@ function App() {
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('milkstore-language') || 'vi'
   })
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('milkstore-theme') || 'light'
+  })
   const t = translations[language]
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   const handleLanguageChange = (nextLanguage) => {
     setLanguage(nextLanguage)
     localStorage.setItem('milkstore-language', nextLanguage)
+  }
+
+  const handleThemeToggle = () => {
+    setTheme((currentTheme) => {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('milkstore-theme', nextTheme)
+      return nextTheme
+    })
   }
 
   const handlePageChange = (page) => {
@@ -123,8 +138,10 @@ function App() {
           accountEmail={currentUser.maTaiKhoan}
           language={language}
           t={t}
+          theme={theme}
           onLanguageChange={handleLanguageChange}
           onLogout={handleLogout}
+          onThemeToggle={handleThemeToggle}
         />
       </>
     )

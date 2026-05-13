@@ -4,15 +4,20 @@ import './AdminTopbar.css'
 
 function AdminTopbar({
   accountEmail,
-  currentTitle,
   language,
   t,
+  theme,
   onLanguageChange,
+  onThemeToggle,
   onLogout,
 }) {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef(null)
   const displayName = accountEmail || 'Admin'
+  const isDarkTheme = theme === 'dark'
+  const searchPlaceholder = language === 'en' ? 'Search...' : 'Tìm kiếm...'
+  const notificationLabel = language === 'en' ? 'Notifications' : 'Thông báo'
+  const accountLabel = language === 'en' ? 'Account' : 'Tài khoản'
 
   useEffect(() => {
     if (!isAccountMenuOpen) return undefined
@@ -40,21 +45,23 @@ function AdminTopbar({
 
   return (
     <header className="admin-topbar">
-      <div className="topbar-title">
-        <h1>{currentTitle}</h1>
-      </div>
-
       <label className="topbar-search">
         <SearchIcon />
-        <input type="search" placeholder="Tìm kiếm..." />
+        <input type="search" placeholder={searchPlaceholder} />
       </label>
 
       <div className="topbar-actions">
-        <button type="button" className="topbar-icon-button" aria-label="Đổi chế độ hiển thị">
-          <MoonIcon />
+        <button
+          type="button"
+          className="topbar-icon-button"
+          onClick={onThemeToggle}
+          aria-label={isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={isDarkTheme ? 'Light theme' : 'Dark theme'}
+        >
+          {isDarkTheme ? <SunIcon /> : <MoonIcon />}
         </button>
 
-        <button type="button" className="topbar-icon-button has-badge" aria-label="Thông báo">
+        <button type="button" className="topbar-icon-button has-badge" aria-label={notificationLabel}>
           <BellIcon />
           <span>9</span>
         </button>
@@ -70,7 +77,7 @@ function AdminTopbar({
             type="button"
             className="topbar-account-button"
             onClick={() => setIsAccountMenuOpen((current) => !current)}
-            aria-label="Tài khoản"
+            aria-label={accountLabel}
             aria-expanded={isAccountMenuOpen}
           >
             <AccountIcon />
@@ -119,6 +126,22 @@ function MoonIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M20.5 14.8A8.2 8.2 0 0 1 9.2 3.5 8.5 8.5 0 1 0 20.5 14.8Z" />
+    </svg>
+  )
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.9 4.9 1.4 1.4" />
+      <path d="m17.7 17.7 1.4 1.4" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.3 17.7-1.4 1.4" />
+      <path d="m19.1 4.9-1.4 1.4" />
     </svg>
   )
 }

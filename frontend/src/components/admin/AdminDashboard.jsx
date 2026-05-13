@@ -3,6 +3,8 @@ import NhomChuPage from '../../pages/nhom-chu/NhomChuPage'
 import NhomHangPage from '../../pages/nhom-hang/NhomHangPage'
 import HangHoaPage from '../../pages/hang-hoa/HangHoaPage'
 import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
+import KhachHangPage from '../../pages/khach-hang/KhachHangPage'
+import NhaCungCapPage from '../../pages/nha-cung-cap/NhaCungCapPage'
 import SalesDashboard from '../../pages/sales/SalesDashboard'
 import InvoicesPage from '../../pages/invoices/InvoicesPage'
 import PlaceholderPage from '../../pages/placeholder/PlaceholderPage'
@@ -16,13 +18,17 @@ function AdminDashboard({
   accountEmail,
   language,
   t,
+  theme,
   onLanguageChange,
   onLogout,
+  onThemeToggle,
 }) {
   const location = useLocation()
   const translatedPageTitles = {
     '/setting': t.admin.pageTitles.settings,
     '/donvi': t.admin.pageTitles.units,
+    '/khach-hang': t.khachHang?.pageTitle || 'Quản lý khách hàng',
+    '/nha-cung-cap': t.nhaCungCap?.pageTitle || 'Quản lý nhà cung cấp',
     '/nhom-chu': t.nhomChu.pageTitle,
     '/nhom-hang': t.nhomHang.pageTitle,
     '/hang-hoa': t.hangHoa?.pageTitle || 'Quản lý hàng hóa',
@@ -38,6 +44,8 @@ function AdminDashboard({
   const adminMenuItems = [
     t.admin.menuItems[0],
     t.admin.menuItems[1],
+    t.khachHang?.menuTitle || 'Khách hàng',
+    t.nhaCungCap?.menuTitle || 'Nhà cung cấp',
     t.nhomChu.menuTitle,
     t.nhomHang.menuTitle,
     t.hangHoa?.menuTitle || 'Hàng hóa',
@@ -72,14 +80,18 @@ function AdminDashboard({
           currentTitle={currentTitle}
           language={language}
           t={t}
+          theme={theme}
           onLanguageChange={onLanguageChange}
           onLogout={onLogout}
+          onThemeToggle={onThemeToggle}
         />
 
         <Routes>
           <Route path="/" element={<Navigate to="/products" replace />} />
           <Route path="/setting" element={<PlaceholderPage title="Cài đặt" />} />
           <Route path="/donvi" element={<UnitConversionPage t={t.unitConversion} />} />
+          <Route path="/khach-hang" element={<KhachHangPage t={t.khachHang} />} />
+          <Route path="/nha-cung-cap" element={<NhaCungCapPage t={t.nhaCungCap} />} />
           <Route path="/nhom-chu" element={<NhomChuPage t={t.nhomChu} />} />
           <Route path="/nhom-hang" element={<NhomHangPage t={t.nhomHang} />} />
           <Route path="/hang-hoa" element={<HangHoaPage t={t.hangHoa} />} />

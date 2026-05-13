@@ -1,6 +1,8 @@
-﻿export const menuIconTypes = [
+export const menuIconTypes = [
   'settings',
   'unit',
+  'customer',
+  'supplier',
   'product',
   'product',
   'product',
@@ -16,6 +18,8 @@
 export const menuRoutes = [
   '/setting',
   '/donvi',
+  '/khach-hang',
+  '/nha-cung-cap',
   '/nhom-chu',
   '/nhom-hang',
   '/hang-hoa',
@@ -31,6 +35,8 @@ export const menuRoutes = [
 export const fallbackPageTitles = {
   '/setting': 'Cài đặt',
   '/donvi': 'Quản lý đơn vị tính',
+  '/khach-hang': 'Quản lý khách hàng',
+  '/nha-cung-cap': 'Quản lý nhà cung cấp',
   '/hang-hoa': 'Quản lý hàng hóa',
   '/products': 'Bảng điều khiển bán hàng',
   '/inventory': 'Quản lý kho hàng',

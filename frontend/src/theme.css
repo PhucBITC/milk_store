@@ -1,32 +1,71 @@
 :root {
-  --text-main: #111;
-  --surface-main: #fff;
-  --surface-muted: #f5f7fb;
+  --text-main: #111827;
+  --text-heading: #153b36;
+  --text-muted: #5f7370;
+  --page-bg:
+    radial-gradient(circle at 4% 5%, rgba(246, 204, 92, 0.16), transparent 26%),
+    linear-gradient(135deg, #f8f4e9 0%, #f7fbf8 48%, #edf6f4 100%);
+  --surface-main: #ffffff;
+  --surface-soft: #f7fbf8;
+  --surface-muted: #eef4f2;
+  --surface-active: #f3f4f6;
   --border-main: #d8dee8;
+  --border-soft: rgba(30, 83, 76, 0.12);
   --primary-action: #2563eb;
   --primary-action-hover: #1d4ed8;
   --success-action: #16a34a;
   --success-action-hover: #15803d;
   --danger-action: #dc2626;
   --warning-accent: #f59e0b;
-  color: #111;
-  background: #fff;
+  --shadow-panel: 0 18px 48px rgba(31, 72, 67, 0.08);
+  color: var(--text-main);
+  background: var(--surface-main);
+}
+
+:root[data-theme='dark'] {
+  --text-main: #e5e7eb;
+  --text-heading: #f8fafc;
+  --text-muted: #a7b4b2;
+  --page-bg:
+    radial-gradient(circle at 8% 6%, rgba(245, 158, 11, 0.12), transparent 28%),
+    linear-gradient(135deg, #0f172a 0%, #111827 48%, #10201e 100%);
+  --surface-main: #111827;
+  --surface-soft: #16213a;
+  --surface-muted: #1f2937;
+  --surface-active: #273449;
+  --border-main: #334155;
+  --border-soft: rgba(148, 163, 184, 0.22);
+  --primary-action: #60a5fa;
+  --primary-action-hover: #3b82f6;
+  --success-action: #14b8a6;
+  --success-action-hover: #0d9488;
+  --danger-action: #f87171;
+  --warning-accent: #f59e0b;
+  --shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.28);
 }
 
 body,
 #root {
-  color: #111;
-  background: #fff;
+  color: var(--text-main);
+  background: var(--surface-main);
 }
 
 .auth-shell,
-.admin-shell,
+.admin-shell {
+  color: var(--text-main) !important;
+  background: var(--page-bg) !important;
+}
+
 .admin-sidebar,
-.admin-workspace,
 .brand-panel,
-.form-panel {
-  color: #111 !important;
-  background: #fff !important;
+.form-panel,
+.admin-workspace {
+  color: var(--text-main) !important;
+}
+
+.admin-sidebar {
+  background: color-mix(in srgb, var(--surface-main) 78%, transparent) !important;
+  border-color: var(--border-soft) !important;
 }
 
 .admin-topbar,
@@ -38,10 +77,12 @@ body,
 .admin-stats article,
 .sales-main,
 .checkout-panel,
-.metric-grid article {
-  color: #111 !important;
-  background: #fff !important;
-  box-shadow: none !important;
+.metric-grid article,
+.topbar-account-menu {
+  color: var(--text-main) !important;
+  background: color-mix(in srgb, var(--surface-main) 94%, transparent) !important;
+  border-color: var(--border-soft) !important;
+  box-shadow: var(--shadow-panel) !important;
 }
 
 .topbar-search,
@@ -55,16 +96,18 @@ body,
 .topbar-icon-button,
 .topbar-account-button,
 .admin-user button {
-  color: #111 !important;
-  background: #fff !important;
+  color: var(--text-main) !important;
+  background: var(--surface-soft) !important;
+  border-color: var(--border-main) !important;
 }
 
 .admin-nav a.active,
 .admin-nav a:hover,
 .auth-switch button.active,
 .language-switcher button.active {
-  color: #111 !important;
-  background: #f3f3f3 !important;
+  color: var(--text-heading) !important;
+  background: var(--surface-active) !important;
+  border-color: var(--border-main) !important;
   box-shadow: none !important;
 }
 
@@ -101,21 +144,14 @@ body,
 .toolbar-actions button,
 .unit-row-actions button {
   color: var(--primary-action) !important;
-  background: #eff6ff !important;
-  border-color: #bfdbfe !important;
+  background: color-mix(in srgb, var(--primary-action) 14%, var(--surface-main)) !important;
+  border-color: color-mix(in srgb, var(--primary-action) 34%, var(--border-main)) !important;
 }
 
 .unit-row-actions button:last-child {
   color: var(--danger-action) !important;
-  background: #fef2f2 !important;
-  border-color: #fecaca !important;
-}
-
-.secondary-admin-action,
-.topbar-account-button {
-  color: #111 !important;
-  background: #f3f4f6 !important;
-  border-color: var(--border-main) !important;
+  background: color-mix(in srgb, var(--danger-action) 12%, var(--surface-main)) !important;
+  border-color: color-mix(in srgb, var(--danger-action) 34%, var(--border-main)) !important;
 }
 
 .topbar-icon-button.has-badge span {
@@ -124,8 +160,12 @@ body,
 }
 
 .unit-table th,
+.invoice-area th {
+  color: var(--text-muted) !important;
+  background: var(--surface-soft) !important;
+}
+
 .unit-table td,
-.invoice-area th,
 .invoice-area td,
 .auth-form input,
 .auth-form select,
@@ -134,53 +174,82 @@ body,
 .nhom-chu-form select,
 .nhom-chu-toolbar input,
 .discount-grid input,
-.topbar-search input {
-  color: #111 !important;
-  background: #fff !important;
+.sales-toolbar select,
+.invoice-area select,
+.invoice-area input {
+  color: var(--text-main) !important;
+  background: var(--surface-main) !important;
+  border-color: var(--border-main) !important;
 }
 
-.invoice-area tbody tr:hover td {
-  background: #f6f6f6 !important;
+.topbar-search input {
+  color: var(--text-main) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.unit-table th,
+.unit-table td,
+.invoice-area th,
+.invoice-area td {
+  border-color: var(--border-main) !important;
+}
+
+.invoice-area tbody tr:hover td,
+.unit-table tbody tr:hover td {
+  background: var(--surface-soft) !important;
 }
 
 .eyebrow,
 .brand-topline,
 .brand-copy h1,
-.brand-copy p,
 .form-header h2,
-.form-header p,
 .admin-brand strong,
-.admin-brand small,
 .topbar-title h1,
 .account-menu-profile strong,
-.account-menu-profile span,
-.admin-nav a,
 .admin-stats strong,
-.admin-stats span,
 .sales-toolbar h2,
-.sales-toolbar p,
-.checkout-header span,
 .checkout-header strong,
 .unit-page-header h2,
 .unit-panel h3,
-.unit-page-header p,
-.unit-calculator span,
 .unit-calculator strong,
+.admin-placeholder h2 {
+  color: var(--text-heading) !important;
+}
+
+.brand-copy p,
+.form-header p,
+.admin-brand small,
+.account-menu-profile span,
+.admin-nav a,
+.admin-stats span,
+.sales-toolbar p,
+.checkout-header span,
+.unit-page-header p,
 .unit-calculator p,
 .unit-calculator small,
-.unit-table th,
-.unit-table td,
-.invoice-area th,
-.invoice-area td,
 .auth-form label,
 .unit-form label,
 .nhom-chu-form label,
 .form-note,
-.form-note button,
 .form-row a,
-.auth-message,
-.unit-message {
-  color: #111 !important;
+.admin-checkbox,
+.discount-grid label,
+.amount-text {
+  color: var(--text-muted) !important;
+}
+
+.account-menu-item {
+  color: var(--text-main) !important;
+  background: transparent !important;
+}
+
+.account-menu-item:hover {
+  background: var(--surface-active) !important;
+}
+
+.account-menu-item.danger {
+  color: var(--danger-action) !important;
 }
 
 body,
