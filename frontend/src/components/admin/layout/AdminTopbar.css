@@ -1,0 +1,211 @@
+.admin-topbar {
+  min-height: 86px;
+  border: 1px solid rgba(30, 83, 76, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 48px rgba(31, 72, 67, 0.08);
+  display: grid;
+  grid-template-columns: 220px minmax(150px, 240px) minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 16px 24px;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.topbar-brand strong,
+.topbar-brand small,
+.topbar-profile strong,
+.topbar-profile small {
+  display: block;
+}
+
+.topbar-brand strong {
+  color: #153b36;
+  font-size: 20px;
+  line-height: 1.05;
+}
+
+.topbar-brand small {
+  margin-top: 5px;
+  color: #b47d12;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topbar-title {
+  min-width: 0;
+}
+
+.topbar-title h1 {
+  margin: 0;
+  color: #153b36;
+  font-size: 28px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-search {
+  min-width: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border: 1px solid rgba(29, 107, 97, 0.08);
+  border-radius: 8px;
+  color: #8aa09c;
+  background: #f7fbf8;
+}
+
+.topbar-search svg,
+.topbar-icon-button svg {
+  width: 19px;
+  height: 19px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topbar-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #173b36;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+}
+
+.topbar-search input::placeholder {
+  color: #8aa09c;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: max-content;
+}
+
+.topbar-icon-button {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(29, 107, 97, 0.1);
+  border-radius: 8px;
+  color: #174f47;
+  background: #fff;
+  cursor: pointer;
+}
+
+.topbar-icon-button.has-badge span {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: #b47d12;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.topbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.topbar-avatar {
+  width: 46px;
+  height: 46px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: #1d6b61;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(29, 107, 97, 0.22);
+}
+
+.topbar-profile strong {
+  max-width: 130px;
+  color: #153b36;
+  font-size: 14px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-profile small {
+  margin-top: 3px;
+  color: #526a66;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.topbar-logout {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(29, 107, 97, 0.18);
+  border-radius: 8px;
+  color: #1d6b61;
+  background: #eef8f5;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 1280px) {
+  .admin-topbar {
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
+  }
+
+  .topbar-brand {
+    display: none;
+  }
+
+  .topbar-search {
+    order: 3;
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-topbar {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .topbar-title h1 {
+    font-size: 24px;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}

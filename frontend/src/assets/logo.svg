@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="ME XIU logo">
+  <rect width="320" height="320" rx="34" fill="#fff"/>
+  <circle cx="160" cy="122" r="82" fill="#1f78d1"/>
+  <circle cx="160" cy="122" r="98" fill="none" stroke="#ee5aa2" stroke-width="18"/>
+  <path d="M91 125c31-18 71-11 91-56-4 35-35 50-57 74 26-16 62-29 78-66-3 42-36 65-56 94 22-20 51-31 71-70 0 48-33 74-51 101-9 13-13 26-15 40H93c4-31 21-51 45-72-19 12-38 23-65 28 6-29 32-50 62-65-16 2-29 3-44-8Z" fill="#fff"/>
+  <path d="M214 143c15-4 33 5 38 22 5 19-4 39-22 47-18 7-40-2-48-21-3-8-3-17 1-24 8 9 19 13 31 10 15-4 23-19 18-33-6-2-12-2-18-1Z" fill="#fff"/>
+  <path d="M54 205c0-18 14-32 32-32h148c18 0 32 14 32 32v36c0 18-14 32-32 32H86c-18 0-32-14-32-32v-36Z" fill="#1f78d1"/>
+  <path d="M54 205c0-18 14-32 32-32h148c18 0 32 14 32 32v36c0 18-14 32-32 32H86c-18 0-32-14-32-32v-36Z" fill="none" stroke="#ee5aa2" stroke-width="8"/>
+  <text x="160" y="218" text-anchor="middle" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">THẾ GIỚI SỮA</text>
+  <text x="160" y="255" text-anchor="middle" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800">MẸ XIU</text>
+  <text x="160" y="302" text-anchor="middle" fill="#ee5aa2" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">Niềm tin của mẹ</text>
+</svg>

@@ -6,7 +6,8 @@ import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
 import SalesDashboard from '../../pages/sales/SalesDashboard'
 import InvoicesPage from '../../pages/invoices/InvoicesPage'
 import PlaceholderPage from '../../pages/placeholder/PlaceholderPage'
-import LanguageSwitcher from '../auth/LanguageSwitcher'
+import BrandLogo from '../shared/BrandLogo'
+import AdminTopbar from './layout/AdminTopbar'
 import AdminIcon from './shared/AdminIcon'
 import { fallbackPageTitles, menuIconTypes, menuRoutes } from '../../config/adminNavigation'
 import './AdminDashboard.css'
@@ -48,7 +49,7 @@ function AdminDashboard({
     <main className="admin-shell">
       <aside className="admin-sidebar" aria-label="Admin navigation">
         <div className="admin-brand">
-          <span className="brand-mark">M</span>
+          <BrandLogo />
           <div>
             <strong>{t.brandName}</strong>
             <small>{t.admin.title}</small>
@@ -66,24 +67,14 @@ function AdminDashboard({
       </aside>
 
       <section className="admin-workspace">
-        <header className="admin-topbar">
-          <div>
-            <p className="eyebrow">{t.admin.title}</p>
-            <h1>{currentTitle}</h1>
-          </div>
-
-          <div className="admin-user">
-            <LanguageSwitcher
-              currentLanguage={language}
-              label={t.languageLabel}
-              onChange={onLanguageChange}
-            />
-            <span>{accountEmail}</span>
-            <button type="button" onClick={onLogout}>
-              {t.admin.logout}
-            </button>
-          </div>
-        </header>
+        <AdminTopbar
+          accountEmail={accountEmail}
+          currentTitle={currentTitle}
+          language={language}
+          t={t}
+          onLanguageChange={onLanguageChange}
+          onLogout={onLogout}
+        />
 
         <Routes>
           <Route path="/" element={<Navigate to="/products" replace />} />

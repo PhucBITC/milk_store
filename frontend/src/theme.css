@@ -1,0 +1,232 @@
+:root {
+  --text-main: #111;
+  --surface-main: #fff;
+  --surface-muted: #f5f7fb;
+  --border-main: #d8dee8;
+  --primary-action: #2563eb;
+  --primary-action-hover: #1d4ed8;
+  --success-action: #16a34a;
+  --success-action-hover: #15803d;
+  --danger-action: #dc2626;
+  --warning-accent: #f59e0b;
+  color: #111;
+  background: #fff;
+}
+
+body,
+#root {
+  color: #111;
+  background: #fff;
+}
+
+.auth-shell,
+.admin-shell,
+.admin-sidebar,
+.admin-workspace,
+.brand-panel,
+.form-panel {
+  color: #111 !important;
+  background: #fff !important;
+}
+
+.admin-topbar,
+.form-card,
+.unit-page-header,
+.unit-panel,
+.unit-calculator,
+.admin-placeholder,
+.admin-stats article,
+.sales-main,
+.checkout-panel,
+.metric-grid article {
+  color: #111 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.topbar-search,
+.language-switcher,
+.auth-switch,
+.auth-message,
+.unit-message,
+.amount-text,
+.admin-nav-icon,
+.secondary-admin-action,
+.topbar-icon-button,
+.topbar-logout,
+.admin-user button {
+  color: #111 !important;
+  background: #fff !important;
+}
+
+.admin-nav a.active,
+.admin-nav a:hover,
+.auth-switch button.active,
+.language-switcher button.active {
+  color: #111 !important;
+  background: #f3f3f3 !important;
+  box-shadow: none !important;
+}
+
+.brand-logo {
+  width: 52px;
+  height: 52px;
+  display: block;
+  flex: 0 0 52px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.topbar-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  flex-basis: 46px;
+  border-radius: 999px !important;
+}
+
+.primary-action {
+  color: #fff !important;
+  background: var(--primary-action) !important;
+  box-shadow: none !important;
+}
+
+.primary-action:hover {
+  background: var(--primary-action-hover) !important;
+}
+
+.pay-action {
+  color: #fff !important;
+  background: var(--success-action) !important;
+  box-shadow: none !important;
+}
+
+.pay-action:hover {
+  background: var(--success-action-hover) !important;
+}
+
+.toolbar-actions button,
+.unit-row-actions button {
+  color: var(--primary-action) !important;
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+.unit-row-actions button:last-child {
+  color: var(--danger-action) !important;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+.secondary-admin-action,
+.topbar-logout {
+  color: #111 !important;
+  background: #f3f4f6 !important;
+  border-color: var(--border-main) !important;
+}
+
+.topbar-icon-button.has-badge span {
+  color: #fff !important;
+  background: var(--warning-accent) !important;
+}
+
+.unit-table th,
+.unit-table td,
+.invoice-area th,
+.invoice-area td,
+.auth-form input,
+.auth-form select,
+.unit-form input,
+.nhom-chu-form input,
+.nhom-chu-form select,
+.nhom-chu-toolbar input,
+.discount-grid input,
+.topbar-search input {
+  color: #111 !important;
+  background: #fff !important;
+}
+
+.invoice-area tbody tr:hover td {
+  background: #f6f6f6 !important;
+}
+
+.eyebrow,
+.brand-topline,
+.brand-copy h1,
+.brand-copy p,
+.form-header h2,
+.form-header p,
+.admin-brand strong,
+.admin-brand small,
+.topbar-brand strong,
+.topbar-brand small,
+.topbar-title h1,
+.topbar-profile strong,
+.topbar-profile small,
+.admin-nav a,
+.admin-stats strong,
+.admin-stats span,
+.sales-toolbar h2,
+.sales-toolbar p,
+.checkout-header span,
+.checkout-header strong,
+.unit-page-header h2,
+.unit-panel h3,
+.unit-page-header p,
+.unit-calculator span,
+.unit-calculator strong,
+.unit-calculator p,
+.unit-calculator small,
+.unit-table th,
+.unit-table td,
+.invoice-area th,
+.invoice-area td,
+.auth-form label,
+.unit-form label,
+.nhom-chu-form label,
+.form-note,
+.form-note button,
+.form-row a,
+.auth-message,
+.unit-message {
+  color: #111 !important;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+td,
+p,
+span,
+label {
+  font-weight: 400 !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+th,
+.brand-mark,
+.topbar-avatar,
+.primary-action,
+.pay-action,
+.topbar-logout,
+.admin-nav a.active,
+.auth-switch button.active,
+.language-switcher button.active {
+  font-weight: 600 !important;
+}
+
+button,
+.admin-nav a,
+.toolbar-actions button,
+.unit-row-actions button,
+.secondary-admin-action {
+  font-weight: 500 !important;
+}

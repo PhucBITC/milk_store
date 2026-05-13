@@ -1,11 +1,12 @@
 import LanguageSwitcher from './LanguageSwitcher'
+import BrandLogo from '../shared/BrandLogo'
 
 function BrandPanel({ language, t, onLanguageChange }) {
   return (
     <section className="brand-panel" aria-label={t.overviewLabel}>
       <div className="brand-topline">
         <div className="brand-identity">
-          <span className="brand-mark">M</span>
+          <BrandLogo />
           <span>{t.brandName}</span>
         </div>
 

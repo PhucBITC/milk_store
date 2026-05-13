@@ -8,6 +8,7 @@ import BrandPanel from './components/auth/BrandPanel'
 import { loginUser, registerUser } from './services/authService'
 import { translations } from './translations'
 import './App.css'
+import './theme.css'
 
 const authPaths = ['/', '/login', '/register']
 
