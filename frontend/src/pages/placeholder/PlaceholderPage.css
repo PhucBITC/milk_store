@@ -1,0 +1,20 @@
+﻿.admin-placeholder {
+  min-height: 260px;
+  padding: 22px;
+  border: 1px solid rgba(30, 83, 76, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 48px rgba(31, 72, 67, 0.1);
+}
+
+.admin-placeholder h2 {
+  margin: 0;
+  color: #153b36;
+  font-size: 24px;
+}
+
+.admin-placeholder p:last-child {
+  margin-top: 10px;
+  color: #61706e;
+  font-weight: 700;
+}
