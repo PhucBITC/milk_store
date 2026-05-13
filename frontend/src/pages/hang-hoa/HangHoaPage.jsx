@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import {
   createHangHoa,
   deleteHangHoa,
@@ -36,7 +37,7 @@ function HangHoaPage({ t }) {
       const response = await getHangHoaList()
       setItems(response.data)
     } catch {
-      setMessage(t.messages.loadFailed)
+      toast.error(t.messages.loadFailed)
     }
   }
 
@@ -69,7 +70,7 @@ function HangHoaPage({ t }) {
         }
       } catch {
         if (isMounted) {
-          setMessage(t.messages.loadFailed)
+          toast.error(t.messages.loadFailed)
         }
       }
     }
@@ -104,17 +105,21 @@ function HangHoaPage({ t }) {
     try {
       if (editingItem) {
         await updateHangHoa(editingItem.maHang, payload)
-        setMessage(t.messages.updated)
+        setMessage('')
+        toast.success(t.messages.updated)
       } else {
         await createHangHoa(payload)
-        setMessage(t.messages.created)
+        setMessage('')
+        toast.success(t.messages.created)
       }
 
       setFormData(emptyForm)
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      setMessage(error.response?.data?.message || error.response?.data || t.messages.saveFailed)
+      const errMsg = error.response?.data?.message || error.response?.data || t.messages.saveFailed
+      setMessage(errMsg)
+      toast.error(errMsg)
     }
   }
 
@@ -138,6 +143,7 @@ function HangHoaPage({ t }) {
   const handleCancel = () => {
     setEditingItem(null)
     setFormData(emptyForm)
+    setMessage('')
   }
 
   const handleDelete = async (maHang) => {
@@ -147,10 +153,12 @@ function HangHoaPage({ t }) {
 
     try {
       await deleteHangHoa(maHang)
-      setMessage(t.messages.deleted)
+      setMessage('')
+      toast.success(t.messages.deleted)
       await loadItems()
     } catch {
       setMessage(t.messages.deleteFailed)
+      toast.error(t.messages.deleteFailed)
     }
   }
 
@@ -163,8 +171,12 @@ function HangHoaPage({ t }) {
         : await getHangHoaList()
       setItems(response.data)
       setMessage('')
+      if (keyword.trim()) {
+        toast.info(`Tìm thấy kết quả cho "${keyword.trim()}"`)
+      }
     } catch {
       setMessage(t.messages.searchFailed)
+      toast.error(t.messages.searchFailed)
     }
   }
 
@@ -194,6 +206,14 @@ function HangHoaPage({ t }) {
   const labelDvt3 = selectedDvtConfig
     ? `${t.fields.giaBan3.split('(')[0]} (${selectedDvtConfig.DVT3 || selectedDvtConfig.dvt3})`
     : t.fields.giaBan3
+
+  const labelGiaNhap = selectedDvtConfig
+    ? `${t.fields.giaNhap} (${selectedDvtConfig.DVT3 || selectedDvtConfig.dvt3})`
+    : `${t.fields.giaNhap} (cơ sở)`
+
+  const labelTonKho = selectedDvtConfig
+    ? `${t.fields.tonKho} (${selectedDvtConfig.DVT3 || selectedDvtConfig.dvt3})`
+    : `${t.fields.tonKho} (cơ sở)`
 
   return (
     <section className="unit-page">
@@ -313,7 +333,7 @@ function HangHoaPage({ t }) {
             </label>
 
             <label>
-              {t.fields.giaNhap}
+              <span style={{ color: '#0d9488', fontWeight: 'bold' }}>{labelGiaNhap}</span>
               <input
                 type="number"
                 name="giaNhap"
@@ -325,7 +345,7 @@ function HangHoaPage({ t }) {
             </label>
 
             <label>
-              {t.fields.tonKho}
+              <span style={{ color: '#0d9488', fontWeight: 'bold' }}>{labelTonKho}</span>
               <input
                 type="number"
                 name="tonKho"

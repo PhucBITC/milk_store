@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import {
   createNhomChu,
   deleteNhomChu,
@@ -24,7 +25,7 @@ function NhomChuPage({ t }) {
       const response = await getNhomChuList()
       setItems(response.data)
     } catch {
-      setMessage(t.messages.loadFailed)
+      toast.error(t.messages.loadFailed)
     }
   }
 
@@ -39,7 +40,7 @@ function NhomChuPage({ t }) {
       })
       .catch(() => {
         if (isMounted) {
-          setMessage(t.messages.loadFailed)
+          toast.error(t.messages.loadFailed)
         }
       })
 
@@ -62,17 +63,21 @@ function NhomChuPage({ t }) {
     try {
       if (editingItem) {
         await updateNhomChu(editingItem.maNhom, formData)
-        setMessage(t.messages.updated)
+        setMessage('')
+        toast.success(t.messages.updated)
       } else {
         await createNhomChu(formData)
-        setMessage(t.messages.created)
+        setMessage('')
+        toast.success(t.messages.created)
       }
 
       setFormData(emptyForm)
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      setMessage(error.response?.data?.message || t.messages.saveFailed)
+      const errMsg = error.response?.data?.message || t.messages.saveFailed
+      setMessage(errMsg)
+      toast.error(errMsg)
     }
   }
 
@@ -88,6 +93,7 @@ function NhomChuPage({ t }) {
   const handleCancel = () => {
     setEditingItem(null)
     setFormData(emptyForm)
+    setMessage('')
   }
 
   const handleDelete = async (maNhom) => {
@@ -97,10 +103,12 @@ function NhomChuPage({ t }) {
 
     try {
       await deleteNhomChu(maNhom)
-      setMessage(t.messages.deleted)
+      setMessage('')
+      toast.success(t.messages.deleted)
       await loadItems()
     } catch {
       setMessage(t.messages.deleteFailed)
+      toast.error(t.messages.deleteFailed)
     }
   }
 
@@ -113,8 +121,12 @@ function NhomChuPage({ t }) {
         : await getNhomChuList()
       setItems(response.data)
       setMessage('')
+      if (keyword.trim()) {
+        toast.info(`Kết quả tìm kiếm cho "${keyword.trim()}"`)
+      }
     } catch {
       setMessage(t.messages.searchFailed)
+      toast.error(t.messages.searchFailed)
     }
   }
 

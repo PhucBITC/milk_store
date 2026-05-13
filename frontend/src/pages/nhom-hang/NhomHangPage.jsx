@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import { getNhomChuList } from '../../services/nhomChuService'
 import {
   createNhomHang,
@@ -27,7 +28,7 @@ function NhomHangPage({ t }) {
       const response = await getNhomHangList()
       setItems(response.data)
     } catch {
-      setMessage(t.messages.loadFailed)
+      toast.error(t.messages.loadFailed)
     }
   }
 
@@ -51,7 +52,7 @@ function NhomHangPage({ t }) {
         }
       } catch {
         if (isMounted) {
-          setMessage(t.messages.loadFailed)
+          toast.error(t.messages.loadFailed)
         }
       }
     }
@@ -77,17 +78,21 @@ function NhomHangPage({ t }) {
     try {
       if (editingItem) {
         await updateNhomHang(editingItem.maNhomHang, formData)
-        setMessage(t.messages.updated)
+        setMessage('')
+        toast.success(t.messages.updated)
       } else {
         await createNhomHang(formData)
-        setMessage(t.messages.created)
+        setMessage('')
+        toast.success(t.messages.created)
       }
 
       setFormData(emptyForm)
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      setMessage(error.response?.data?.message || t.messages.saveFailed)
+      const errMsg = error.response?.data?.message || t.messages.saveFailed
+      setMessage(errMsg)
+      toast.error(errMsg)
     }
   }
 
@@ -104,6 +109,7 @@ function NhomHangPage({ t }) {
   const handleCancel = () => {
     setEditingItem(null)
     setFormData(emptyForm)
+    setMessage('')
   }
 
   const handleDelete = async (maNhomHang) => {
@@ -113,10 +119,12 @@ function NhomHangPage({ t }) {
 
     try {
       await deleteNhomHang(maNhomHang)
-      setMessage(t.messages.deleted)
+      setMessage('')
+      toast.success(t.messages.deleted)
       await loadItems()
     } catch {
       setMessage(t.messages.deleteFailed)
+      toast.error(t.messages.deleteFailed)
     }
   }
 
@@ -129,8 +137,12 @@ function NhomHangPage({ t }) {
         : await getNhomHangList()
       setItems(response.data)
       setMessage('')
+      if (keyword.trim()) {
+        toast.info(`Kết quả tìm kiếm cho "${keyword.trim()}"`)
+      }
     } catch {
       setMessage(t.messages.searchFailed)
+      toast.error(t.messages.searchFailed)
     }
   }
 

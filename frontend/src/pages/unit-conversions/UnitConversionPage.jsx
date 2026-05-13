@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import UnitConversionCalculator from '../../components/unit-conversions/UnitConversionCalculator'
 import UnitConversionForm from '../../components/unit-conversions/UnitConversionForm'
 import UnitConversionTable from '../../components/unit-conversions/UnitConversionTable'
@@ -21,7 +22,7 @@ function UnitConversionPage({ t }) {
       const response = await getUnitConversions()
       setItems(response.data)
     } catch {
-      setMessage(t.messages.loadFailed)
+      toast.error(t.messages.loadFailed)
     }
   }
 
@@ -36,7 +37,7 @@ function UnitConversionPage({ t }) {
       })
       .catch(() => {
         if (isMounted) {
-          setMessage(t.messages.loadFailed)
+          toast.error(t.messages.loadFailed)
         }
       })
 
@@ -49,16 +50,20 @@ function UnitConversionPage({ t }) {
     try {
       if (editingItem) {
         await updateUnitConversion(editingItem.MADVT, formData)
-        setMessage(t.messages.updated)
+        setMessage('')
+        toast.success(t.messages.updated)
       } else {
         await createUnitConversion(formData)
-        setMessage(t.messages.created)
+        setMessage('')
+        toast.success(t.messages.created)
       }
 
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      setMessage(error.response?.data?.message || t.messages.saveFailed)
+      const errMsg = error.response?.data?.message || t.messages.saveFailed
+      setMessage(errMsg)
+      toast.error(errMsg)
     }
   }
 
@@ -70,10 +75,12 @@ function UnitConversionPage({ t }) {
     try {
       await deleteUnitConversion(MADVT)
       setCalculation(null)
-      setMessage(t.messages.deleted)
+      setMessage('')
+      toast.success(t.messages.deleted)
       await loadItems()
     } catch {
       setMessage(t.messages.deleteFailed)
+      toast.error(t.messages.deleteFailed)
     }
   }
 
@@ -82,8 +89,10 @@ function UnitConversionPage({ t }) {
       const response = await calculateUnitConversion(MADVT)
       setCalculation(response.data)
       setMessage('')
+      toast.info(`Đã áp dụng quy tắc tỷ lệ cho [${MADVT}]`)
     } catch {
       setMessage(t.messages.calculateFailed)
+      toast.error(t.messages.calculateFailed)
     }
   }
 

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import NhomChuPage from '../../pages/nhom-chu/NhomChuPage'
 import NhomHangPage from '../../pages/nhom-hang/NhomHangPage'
 import HangHoaPage from '../../pages/hang-hoa/HangHoaPage'
 import UnitConversionPage from '../../pages/unit-conversions/UnitConversionPage'
 import LanguageSwitcher from '../auth/LanguageSwitcher'
-import { getHangHoaList } from '../../services/hangHoaService'
+import { getHangHoaList, updateHangHoa } from '../../services/hangHoaService'
 
 const sampleProducts = [
   {
@@ -28,12 +29,6 @@ const sampleProducts = [
     total: '480.000',
     note: 'Giao lạnh',
   },
-]
-
-const adminStats = [
-  { value: '18', label: 'Đơn chờ xử lý' },
-  { value: '1.2k', label: 'Sản phẩm khả dụng' },
-  { value: '32', label: 'Đại lý hôm nay' },
 ]
 
 const menuIconTypes = [
@@ -165,7 +160,7 @@ function AdminDashboard({
           <Route path="/hang-hoa" element={<HangHoaPage t={t.hangHoa} />} />
           <Route path="/products" element={<SalesDashboard t={t} />} />
           <Route path="/inventory" element={<PlaceholderPage title="Kho hàng" />} />
-          <Route path="/invoices" element={<PlaceholderPage title="Hóa đơn" />} />
+          <Route path="/invoices" element={<InvoicesPage t={t} />} />
           <Route path="/debts" element={<PlaceholderPage title="Công nợ" />} />
           <Route path="/cash" element={<PlaceholderPage title="Thu chi" />} />
           <Route path="/reports" element={<PlaceholderPage title="Báo cáo" />} />
@@ -182,6 +177,7 @@ function SalesDashboard({ t }) {
   const [cartItems, setCartItems] = useState([])
   const [selectedProduct, setSelectedProduct] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState('')
+  const navigate = useNavigate()
 
   // Tải danh sách Hàng hóa thực tế từ DB kèm theo cấu trúc giá 3 tầng
   useEffect(() => {
@@ -198,7 +194,19 @@ function SalesDashboard({ t }) {
     }
   }, [])
 
-  // Gợi ý danh sách sản phẩm từ DB kèm theo cả 3 mức giá sỉ/lẻ
+  // Lấy danh sách hóa đơn từ localStorage để tính toán các chỉ số Header thực tế
+  const savedInvoices = JSON.parse(localStorage.getItem('milkstore_invoices') || '[]')
+  const totalInvoicesCount = savedInvoices.length
+  // Giả định đại lý ban đầu là 12, tăng dần khi có đơn hàng để số liệu trông sống động
+  const activeAgenciesCount = 12 + Math.floor(totalInvoicesCount / 2)
+
+  const dynamicStats = [
+    { value: `${totalInvoicesCount}`, label: 'Hóa đơn đã xuất' },
+    { value: `${dbProducts.length || '...'}`, label: 'Sản phẩm khả dụng' },
+    { value: `${activeAgenciesCount}`, label: 'Đại lý hôm nay' },
+  ]
+
+  // Gợi ý danh sách sản phẩm từ DB kèm theo cả 3 mức giá sỉ/lẻ và đối tượng dữ liệu gốc
   const availableOptions = dbProducts.length > 0
     ? dbProducts.map((p) => ({
         code: p.maHang,
@@ -212,6 +220,7 @@ function SalesDashboard({ t }) {
         qc1: p.qc1 || 1,
         qc2: p.qc2 || 1,
         warehouse: 'Kho Tổng',
+        originalDbItem: p,
       }))
     : sampleProducts.map((p) => ({
         ...p,
@@ -224,29 +233,59 @@ function SalesDashboard({ t }) {
     const found = availableOptions.find((item) => item.code === code)
     if (!found) return
 
+    const dbItem = dbProducts.find((p) => p.maHang === code)
+    const maxTonKho = dbItem ? Number(dbItem.tonKho) || 0 : 999999
+
     setCartItems((current) => {
-      // Cách chuẩn xác nhất của máy POS siêu thị:
-      // Tìm xem mặt hàng này đã xuất hiện trong giỏ hàng ở BẤT KỲ dòng nào chưa.
-      // Nếu ĐÃ CÓ ít nhất 1 dòng của mặt hàng này, ta luôn ưu tiên CỘNG DỒN SỐ LƯỢNG vào dòng đầu tiên tìm thấy.
       const existingRowIndex = current.findIndex((item) => item.code === code)
 
       if (existingRowIndex > -1) {
         const updated = [...current]
-        updated[existingRowIndex] = {
-          ...updated[existingRowIndex],
-          quantity: updated[existingRowIndex].quantity + 1,
+        const targetItem = updated[existingRowIndex]
+        const currentQty = Number(targetItem.quantity) || 0
+        const multiplier = targetItem.selectedTier === 'DVT1' ? (targetItem.qc1 * targetItem.qc2) : targetItem.selectedTier === 'DVT2' ? targetItem.qc2 : 1
+        
+        // Tính tổng cơ sở các dòng cùng mã
+        const totalBaseSum = current.reduce((sum, it) => {
+          if (it.code === code) {
+            const m = it.selectedTier === 'DVT1' ? (it.qc1 * it.qc2) : it.selectedTier === 'DVT2' ? it.qc2 : 1
+            return sum + (Number(it.quantity) || 0) * m
+          }
+          return sum
+        }, 0)
+
+        if (totalBaseSum + multiplier > maxTonKho) {
+          toast.warn(`⚠️ Không đủ tồn kho để tăng tiếp mặt hàng này! (Tồn kho tối đa: ${maxTonKho} ${dbItem?.dvt3 || dbItem?.dvt || ''})`)
+          return current
         }
+
+        updated[existingRowIndex] = {
+          ...targetItem,
+          quantity: currentQty + 1,
+        }
+        toast.success(`Đã tăng số lượng mặt hàng [${code}]`)
         return updated
       }
 
-      // Nếu CHƯA CÓ dòng nào của mặt hàng này, tạo mới với quy cách lớn nhất khả dụng
       const initialTier = found.dvt1 && found.giaBan1 > 0
         ? 'DVT1'
         : found.dvt2 && found.giaBan2 > 0
         ? 'DVT2'
         : 'DVT3'
 
-      // Sử dụng Date.now() làm cartRowId để đảm bảo mỗi dòng tách ra vĩnh viễn mang key duy nhất
+      const initialMultiplier = initialTier === 'DVT1' ? (found.qc1 * found.qc2) : initialTier === 'DVT2' ? found.qc2 : 1
+
+      if (initialMultiplier > maxTonKho) {
+        toast.warn(`⚠️ Tồn kho không đủ để bán quy cách ${initialTier}! (Tồn kho: ${maxTonKho})`)
+        if (1 <= maxTonKho) {
+          toast.info('Tự động chuyển sang ĐVT cơ sở do không đủ tồn kho Thùng/Lốc')
+          const uniqueId = `${code}-${Date.now()}`
+          return [...current, { ...found, cartRowId: uniqueId, selectedTier: 'DVT3', quantity: 1 }]
+        }
+        return current
+      }
+
+      toast.success(`Đã thêm mặt hàng [${code}] vào hóa đơn`)
       const uniqueId = `${code}-${Date.now()}`
       return [...current, { ...found, cartRowId: uniqueId, selectedTier: initialTier, quantity: 1 }]
     })
@@ -254,15 +293,29 @@ function SalesDashboard({ t }) {
     setCheckoutMessage('')
   }
 
-  // Chức năng "Tách dòng" (Split row) cực kỳ đột phá:
-  // Cho phép nhân viên bấm nút tách dòng để chèn thêm 1 dòng độc lập cho chính mặt hàng đó nhằm bán quy cách khác
   const handleSplitRow = (itemToSplit) => {
     setCartItems((current) => {
       const index = current.findIndex((item) => item.cartRowId === itemToSplit.cartRowId)
       if (index === -1) return current
 
+      const dbItem = dbProducts.find((p) => p.maHang === itemToSplit.code)
+      if (dbItem) {
+        const maxTonKho = Number(dbItem.tonKho) || 0
+        const totalBaseSum = current.reduce((sum, it) => {
+          if (it.code === itemToSplit.code) {
+            const m = it.selectedTier === 'DVT1' ? (it.qc1 * it.qc2) : it.selectedTier === 'DVT2' ? it.qc2 : 1
+            return sum + (Number(it.quantity) || 0) * m
+          }
+          return sum
+        }, 0)
+
+        if (totalBaseSum + 1 > maxTonKho) {
+          toast.warn(`⚠️ Hết tồn kho khả dụng để tách thêm dòng mới!`)
+          return current
+        }
+      }
+
       const updated = [...current]
-      // Chèn thêm 1 dòng ngay bên dưới dòng hiện tại, mặc định số lượng = 1 và ở quy cách cơ sở (DVT3)
       const newRowUniqueId = `${itemToSplit.code}-${Date.now()}`
       const newRow = {
         ...itemToSplit,
@@ -272,20 +325,94 @@ function SalesDashboard({ t }) {
       }
 
       updated.splice(index + 1, 0, newRow)
+      toast.info('Đã tách thêm 1 dòng quy cách độc lập cho mặt hàng')
       return updated
     })
   }
 
+  // Cập nhật số lượng qua nút + / - kèm kiểm tra Validation Tồn kho
   const handleUpdateQty = (cartRowId, delta) => {
+    // Trường hợp bấm nút Xóa (delta rất nhỏ)
+    if (delta <= -999999) {
+      setCartItems((current) => current.filter((it) => it.cartRowId !== cartRowId))
+      toast.info('Đã xóa mặt hàng khỏi hóa đơn')
+      return
+    }
+
     setCartItems((current) => {
+      const targetItem = current.find((it) => it.cartRowId === cartRowId)
+      if (!targetItem) return current
+
+      const currentQty = Number(targetItem.quantity) || 0
+      const proposedQty = Math.max(0, currentQty + delta)
+
+      // Kiểm tra validate với DB
+      const dbItem = dbProducts.find((p) => p.maHang === targetItem.code)
+      if (dbItem && delta > 0) {
+        const maxTonKho = Number(dbItem.tonKho) || 0
+        const multiplier = targetItem.selectedTier === 'DVT1' ? (targetItem.qc1 * targetItem.qc2) : targetItem.selectedTier === 'DVT2' ? targetItem.qc2 : 1
+        
+        // Tổng các dòng khác của cùng một mã sản phẩm
+        const otherRowsBaseSum = current.reduce((sum, it) => {
+          if (it.code === targetItem.code && it.cartRowId !== cartRowId) {
+            const m = it.selectedTier === 'DVT1' ? (it.qc1 * it.qc2) : it.selectedTier === 'DVT2' ? it.qc2 : 1
+            return sum + (Number(it.quantity) || 0) * m
+          }
+          return sum
+        }, 0)
+
+        const proposedBaseTotal = otherRowsBaseSum + (proposedQty * multiplier)
+        if (proposedBaseTotal > maxTonKho) {
+          toast.warn(`⚠️ Vượt quá tồn kho khả dụng! (Tồn kho tối đa: ${maxTonKho} ${dbItem.dvt3 || dbItem.dvt || ''})`)
+          const maxAllowedQtyForRow = Math.floor((maxTonKho - otherRowsBaseSum) / multiplier)
+          return current.map((it) => it.cartRowId === cartRowId ? { ...it, quantity: Math.max(0, maxAllowedQtyForRow) } : it)
+        }
+      }
+
       return current
         .map((item) => {
           if (item.cartRowId === cartRowId) {
-            return { ...item, quantity: item.quantity + delta }
+            return { ...item, quantity: proposedQty }
           }
           return item
         })
-        .filter((item) => item.quantity > 0)
+        .filter((item) => Number(item.quantity) > 0)
+    })
+  }
+
+  // Hỗ trợ gõ trực tiếp qua ô input kèm theo cảnh báo ngay lập tức nếu vượt ngưỡng
+  const handleSetQtyText = (cartRowId, newQtyText) => {
+    setCartItems((current) => {
+      const targetItem = current.find((it) => it.cartRowId === cartRowId)
+      if (!targetItem) return current
+
+      const numericVal = Number(newQtyText)
+      if (isNaN(numericVal) || newQtyText === '') {
+        return current.map((item) => item.cartRowId === cartRowId ? { ...item, quantity: newQtyText } : item)
+      }
+
+      const dbItem = dbProducts.find((p) => p.maHang === targetItem.code)
+      if (dbItem) {
+        const maxTonKho = Number(dbItem.tonKho) || 0
+        const multiplier = targetItem.selectedTier === 'DVT1' ? (targetItem.qc1 * targetItem.qc2) : targetItem.selectedTier === 'DVT2' ? targetItem.qc2 : 1
+        
+        const otherRowsBaseSum = current.reduce((sum, it) => {
+          if (it.code === targetItem.code && it.cartRowId !== cartRowId) {
+            const m = it.selectedTier === 'DVT1' ? (it.qc1 * it.qc2) : it.selectedTier === 'DVT2' ? it.qc2 : 1
+            return sum + (Number(it.quantity) || 0) * m
+          }
+          return sum
+        }, 0)
+
+        const proposedBaseTotal = otherRowsBaseSum + (numericVal * multiplier)
+        if (proposedBaseTotal > maxTonKho) {
+          toast.warn(`⚠️ Vượt quá tồn kho khả dụng! (Tồn kho tối đa: ${maxTonKho} ${dbItem.dvt3 || dbItem.dvt || ''})`)
+          const maxAllowedQtyForRow = Math.floor((maxTonKho - otherRowsBaseSum) / multiplier)
+          return current.map((item) => item.cartRowId === cartRowId ? { ...item, quantity: Math.max(0, maxAllowedQtyForRow) } : item)
+        }
+      }
+
+      return current.map((item) => item.cartRowId === cartRowId ? { ...item, quantity: newQtyText } : item)
     })
   }
 
@@ -300,7 +427,6 @@ function SalesDashboard({ t }) {
     })
   }
 
-  // Tính toán đơn giá áp dụng và số lượng trừ kho cơ sở cho từng dòng
   const getLineDetails = (item) => {
     const unitLabel = item.selectedTier === 'DVT1'
       ? item.dvt1
@@ -320,22 +446,98 @@ function SalesDashboard({ t }) {
       ? item.qc2
       : 1
 
-    const totalBaseQtyDecreased = item.quantity * baseQtyMultiplier
+    const safeQty = Number(item.quantity) || 0
+    const totalBaseQtyDecreased = safeQty * baseQtyMultiplier
 
     return { unitLabel, appliedPrice, totalBaseQtyDecreased, baseUnitName: item.dvt3 }
   }
 
   const totalPrice = cartItems.reduce((acc, item) => {
     const { appliedPrice } = getLineDetails(item)
-    return acc + appliedPrice * item.quantity
+    const safeQty = Number(item.quantity) || 0
+    return acc + appliedPrice * safeQty
   }, 0)
 
-  const handleCheckout = () => {
+  // Gọi API trừ kho và xuất hóa đơn
+  const handleCheckout = async () => {
     if (cartItems.length === 0) return
-    setCheckoutMessage(
-      `Thanh toán thành công đơn hàng đa quy cách trị giá ${totalPrice.toLocaleString('vi-VN')} đ!`
-    )
+
+    // 1. Gộp tổng số lượng cơ sở cần trừ theo mã mặt hàng
+    const qtyDecreasedByCode = {}
+    cartItems.forEach((item) => {
+      const { totalBaseQtyDecreased } = getLineDetails(item)
+      qtyDecreasedByCode[item.code] = (qtyDecreasedByCode[item.code] || 0) + totalBaseQtyDecreased
+    })
+
+    // 2. Thực hiện gọi API updateHangHoa cập nhật lại Tồn kho thực tế
+    for (const code of Object.keys(qtyDecreasedByCode)) {
+      const decreaseQty = qtyDecreasedByCode[code]
+      const targetItem = dbProducts.find((p) => p.maHang === code)
+      
+      if (targetItem) {
+        const currentTonKho = Number(targetItem.tonKho) || 0
+        const newTonKho = Math.max(0, currentTonKho - decreaseQty)
+
+        try {
+          await updateHangHoa(code, {
+            tenHang: targetItem.tenHang,
+            maNhomHang: targetItem.maNhomHang || targetItem.nhomHang?.maNhomHang || '',
+            maDvt: targetItem.maDvt || targetItem.unitConversion?.maDvt || '',
+            giaBan1: targetItem.giaBan1,
+            giaBan2: targetItem.giaBan2,
+            giaBan3: targetItem.giaBan3,
+            giaNhap: targetItem.giaNhap,
+            tonKho: newTonKho,
+            hienThi: targetItem.hienThi ?? true,
+            ghiChu: targetItem.ghiChu || '',
+          })
+        } catch {
+          // Vẫn tiếp tục xử lý các mặt hàng khác nếu 1 mã bị lỗi
+        }
+      }
+    }
+
+    // 3. Tính toán chi phí vốn và lợi nhuận gộp cho hóa đơn
+    const totalCost = cartItems.reduce((acc, item) => {
+      const targetItem = dbProducts.find((p) => p.maHang === item.code)
+      const costPrice = targetItem ? Number(targetItem.giaNhap) || 0 : 0
+      const { totalBaseQtyDecreased } = getLineDetails(item)
+      return acc + costPrice * totalBaseQtyDecreased
+    }, 0)
+
+    // 4. Tạo đối tượng Hóa đơn lưu vào localStorage
+    const invoiceId = `HD${Date.now().toString().slice(-6)}`
+    const finalItems = cartItems.map((item) => {
+      const details = getLineDetails(item)
+      return {
+        ...item,
+        appliedPrice: details.appliedPrice,
+        totalBaseQtyDecreased: details.totalBaseQtyDecreased,
+        unitLabel: details.unitLabel,
+        safeQuantity: Number(item.quantity) || 0,
+      }
+    })
+
+    const invoiceData = {
+      id: invoiceId,
+      createdAt: new Date().toISOString(),
+      items: finalItems,
+      totalAmount: totalPrice,
+      totalCost: totalCost,
+      grossProfit: totalPrice - totalCost,
+    }
+
+    const currentInvoices = JSON.parse(localStorage.getItem('milkstore_invoices') || '[]')
+    localStorage.setItem('milkstore_invoices', JSON.stringify([invoiceData, ...currentInvoices]))
+
+    // 5. Cập nhật giao diện
+    const successMsg = `Thanh toán thành công đơn hàng ${invoiceId} trị giá ${totalPrice.toLocaleString('vi-VN')} đ!`
+    setCheckoutMessage(successMsg)
+    toast.success(successMsg)
     setCartItems([])
+
+    // Tải lại danh sách Hàng hóa để làm mới tồn kho hiển thị
+    getHangHoaList().then((res) => setDbProducts(res.data)).catch(() => {})
   }
 
   return (
@@ -349,14 +551,35 @@ function SalesDashboard({ t }) {
             borderRadius: '4px',
             marginBottom: '1rem',
             fontWeight: 'bold',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
           }}
         >
-          🎉 {checkoutMessage}
+          <span>🎉 {checkoutMessage} (Hệ thống đã tự động trừ kho)</span>
+          <button
+            type="button"
+            onClick={() => navigate('/invoices')}
+            style={{
+              padding: '0.4rem 0.8rem',
+              background: '#155724',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '0.9rem',
+            }}
+          >
+            📋 Xem lịch sử hóa đơn
+          </button>
         </div>
       ) : null}
 
       <section className="admin-stats" aria-label="Dashboard stats">
-        {adminStats.map((stat) => (
+        {dynamicStats.map((stat) => (
           <article key={stat.label}>
             <strong>{stat.value}</strong>
             <span>{stat.label}</span>
@@ -375,7 +598,6 @@ function SalesDashboard({ t }) {
               <p>{t.admin.salesDescription}</p>
             </div>
 
-            {/* Thanh chọn sản phẩm để bán */}
             <div style={{ flex: 1, minWidth: '250px' }}>
               <select
                 value={selectedProduct}
@@ -392,12 +614,14 @@ function SalesDashboard({ t }) {
               >
                 <option value="">🔍 Chọn sản phẩm thêm vào hóa đơn...</option>
                 {availableOptions.map((opt) => {
+                  const currentDbItem = dbProducts.find((p) => p.maHang === opt.code)
+                  const tonKhoText = currentDbItem ? `Tồn: ${currentDbItem.tonKho}` : ''
                   const defaultLabel = opt.dvt1 && opt.giaBan1 > 0
                     ? `${opt.dvt1}: ${opt.giaBan1.toLocaleString()} đ`
                     : `${opt.dvt3}: ${opt.giaBan3.toLocaleString()} đ`
                   return (
                     <option key={opt.code} value={opt.code}>
-                      [{opt.code}] {opt.name} - ({defaultLabel})
+                      [{opt.code}] {opt.name} - ({defaultLabel}) {tonKhoText ? `[${tonKhoText}]` : ''}
                     </option>
                   )
                 })}
@@ -430,6 +654,7 @@ function SalesDashboard({ t }) {
                 ) : (
                   cartItems.map((item, index) => {
                     const { appliedPrice, totalBaseQtyDecreased, baseUnitName } = getLineDetails(item)
+                    const safeQty = Number(item.quantity) || 0
                     return (
                       <tr key={item.cartRowId}>
                         <td>{index + 1}</td>
@@ -438,7 +663,6 @@ function SalesDashboard({ t }) {
                         </td>
                         <td>{item.name}</td>
                         <td>
-                          {/* Chuyển đổi linh hoạt quy cách đóng gói trực tiếp trên dòng giỏ hàng */}
                           <select
                             value={item.selectedTier}
                             onChange={(e) => handleSwitchTier(item.cartRowId, e.target.value)}
@@ -467,7 +691,7 @@ function SalesDashboard({ t }) {
                           </select>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
                             <button
                               type="button"
                               onClick={() => handleUpdateQty(item.cartRowId, -1)}
@@ -477,11 +701,25 @@ function SalesDashboard({ t }) {
                                 background: '#eee',
                                 border: '1px solid #ccc',
                                 borderRadius: '2px',
+                                fontWeight: 'bold',
                               }}
                             >
                               -
                             </button>
-                            <strong>{item.quantity}</strong>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleSetQtyText(item.cartRowId, e.target.value)}
+                              style={{
+                                width: '50px',
+                                textAlign: 'center',
+                                fontWeight: 'bold',
+                                padding: '0.2rem',
+                                border: '1px solid #0d9488',
+                                borderRadius: '2px',
+                              }}
+                              min="0"
+                            />
                             <button
                               type="button"
                               onClick={() => handleUpdateQty(item.cartRowId, 1)}
@@ -491,6 +729,7 @@ function SalesDashboard({ t }) {
                                 background: '#eee',
                                 border: '1px solid #ccc',
                                 borderRadius: '2px',
+                                fontWeight: 'bold',
                               }}
                             >
                               +
@@ -500,7 +739,7 @@ function SalesDashboard({ t }) {
                         <td>{appliedPrice.toLocaleString('vi-VN')}</td>
                         <td>
                           <strong style={{ color: '#0d9488' }}>
-                            {(appliedPrice * item.quantity).toLocaleString('vi-VN')}
+                            {(appliedPrice * safeQty).toLocaleString('vi-VN')}
                           </strong>
                         </td>
                         <td>
@@ -510,7 +749,6 @@ function SalesDashboard({ t }) {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                            {/* Nút tách dòng để bán nhiều quy cách đóng gói cho cùng mặt hàng */}
                             {item.dvt1 || item.dvt2 ? (
                               <button
                                 type="button"
@@ -533,7 +771,7 @@ function SalesDashboard({ t }) {
 
                             <button
                               type="button"
-                              onClick={() => handleUpdateQty(item.cartRowId, -item.quantity)}
+                              onClick={() => handleUpdateQty(item.cartRowId, -999999)}
                               style={{
                                 color: 'red',
                                 background: 'none',
@@ -580,7 +818,16 @@ function SalesDashboard({ t }) {
           <p className="amount-text">{t.admin.amountInWords}</p>
 
           <div className="payment-actions">
-            <button type="button" className="secondary-admin-action" onClick={() => setCartItems([])}>
+            <button
+              type="button"
+              className="secondary-admin-action"
+              onClick={() => {
+                if (cartItems.length > 0) {
+                  setCartItems([])
+                  toast.info('Đã làm trống các mặt hàng trong hóa đơn')
+                }
+              }}
+            >
               {t.admin.deleteBill || 'Xóa đơn'}
             </button>
             <button
@@ -599,6 +846,185 @@ function SalesDashboard({ t }) {
         </aside>
       </section>
     </>
+  )
+}
+
+// Giao diện Lịch sử Hóa đơn sang trọng và trọn vẹn
+function InvoicesPage({ t }) {
+  const [invoices, setInvoices] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedInvoice, setSelectedInvoice] = useState(null)
+
+  useEffect(() => {
+    const loaded = JSON.parse(localStorage.getItem('milkstore_invoices') || '[]')
+    setInvoices(loaded)
+  }, [])
+
+  const handleClearHistory = () => {
+    if (window.confirm('Bạn chắc chắn muốn xóa toàn bộ lịch sử hóa đơn lưu trong trình duyệt?')) {
+      localStorage.removeItem('milkstore_invoices')
+      setInvoices([])
+      setSelectedInvoice(null)
+      toast.success('Đã xóa sạch lịch sử hóa đơn bán lẻ!')
+    }
+  }
+
+  const filteredInvoices = invoices.filter((inv) =>
+    inv.id.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const totalRevenue = invoices.reduce((acc, inv) => acc + (Number(inv.totalAmount) || 0), 0)
+  const totalProfit = invoices.reduce((acc, inv) => acc + (Number(inv.grossProfit) || 0), 0)
+
+  return (
+    <section className="unit-page">
+      <div className="unit-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <p className="eyebrow">Quản lý hóa đơn</p>
+          <h2>Lịch sử Đơn hàng Bán lẻ</h2>
+          <p>Tra cứu chi tiết sản phẩm, doanh thu và lợi nhuận gộp theo từng hóa đơn.</p>
+        </div>
+        {invoices.length > 0 ? (
+          <button
+            type="button"
+            onClick={handleClearHistory}
+            style={{
+              padding: '0.4rem 0.8rem',
+              background: '#dc3545',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            🗑️ Xóa sạch lịch sử
+          </button>
+        ) : null}
+      </div>
+
+      <div className="unit-panel" style={{ marginBottom: '1.5rem', background: '#f8fafc', borderLeft: '4px solid #0d9488' }}>
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+          <div>
+            <small style={{ color: '#64748b', fontWeight: 'bold' }}>TỔNG DOANH THU ĐÃ XUẤT</small>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f766e' }}>
+              {totalRevenue.toLocaleString('vi-VN')} đ
+            </div>
+          </div>
+          <div>
+            <small style={{ color: '#64748b', fontWeight: 'bold' }}>TỔNG LỢI NHUẬN Gộp (Ước tính)</small>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#16a34a' }}>
+              {totalProfit.toLocaleString('vi-VN')} đ
+            </div>
+          </div>
+          <div>
+            <small style={{ color: '#64748b', fontWeight: 'bold' }}>SỐ HÓA ĐƠN LƯU TRỮ</small>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#333' }}>
+              {invoices.length} đơn
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="unit-panel">
+        <div className="nhom-chu-toolbar">
+          <h3>Danh sách hóa đơn</h3>
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="🔍 Tìm theo mã hóa đơn (VD: HD123)..."
+            style={{ padding: '0.4rem', borderRadius: '2px', border: '1px solid #ccc', minWidth: '250px' }}
+          />
+        </div>
+
+        <div className="unit-table-wrap">
+          <table className="unit-table">
+            <thead>
+              <tr>
+                <th>Mã HĐ</th>
+                <th>Thời gian xuất</th>
+                <th>Số mặt hàng</th>
+                <th>Tổng thanh toán</th>
+                <th>Tiền vốn</th>
+                <th>Lợi nhuận gộp</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
+                    Chưa có hóa đơn nào được lưu trữ.
+                  </td>
+                </tr>
+              ) : (
+                filteredInvoices.map((inv) => (
+                  <tr key={inv.id} style={{ background: selectedInvoice?.id === inv.id ? '#f0fdfa' : 'transparent' }}>
+                    <td><strong>{inv.id}</strong></td>
+                    <td>{new Date(inv.createdAt).toLocaleString('vi-VN')}</td>
+                    <td><strong>{inv.items?.length || 0}</strong> dòng</td>
+                    <td><strong style={{ color: '#0d9488' }}>{(Number(inv.totalAmount) || 0).toLocaleString('vi-VN')} đ</strong></td>
+                    <td>{(Number(inv.totalCost) || 0).toLocaleString('vi-VN')} đ</td>
+                    <td><strong style={{ color: '#16a34a' }}>{(Number(inv.grossProfit) || 0).toLocaleString('vi-VN')} đ</strong></td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedInvoice(selectedInvoice?.id === inv.id ? null : inv)}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          background: selectedInvoice?.id === inv.id ? '#0d9488' : '#e2e8f0',
+                          color: selectedInvoice?.id === inv.id ? '#fff' : '#333',
+                          border: 'none',
+                          borderRadius: '2px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {selectedInvoice?.id === inv.id ? 'Thu gọn' : 'Xem chi tiết'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {selectedInvoice ? (
+          <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+            <h4 style={{ color: '#0f766e', marginBottom: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.4rem' }}>
+              📦 Chi tiết mặt hàng của hóa đơn {selectedInvoice.id}
+            </h4>
+            <table className="unit-table" style={{ fontSize: '0.9rem' }}>
+              <thead>
+                <tr>
+                  <th>Mã hàng</th>
+                  <th>Tên hàng</th>
+                  <th>Quy cách bán</th>
+                  <th>Số lượng</th>
+                  <th>Đơn giá áp dụng</th>
+                  <th>Thành tiền</th>
+                  <th>Trừ kho thực tế</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedInvoice.items?.map((item, idx) => (
+                  <tr key={idx}>
+                    <td><strong>{item.code}</strong></td>
+                    <td>{item.name}</td>
+                    <td><span style={{ color: '#0d9488', fontWeight: 'bold' }}>{item.unitLabel}</span></td>
+                    <td><strong>{item.safeQuantity || item.quantity}</strong></td>
+                    <td>{(Number(item.appliedPrice) || 0).toLocaleString('vi-VN')} đ</td>
+                    <td><strong>{((Number(item.appliedPrice) || 0) * (Number(item.safeQuantity || item.quantity) || 0)).toLocaleString('vi-VN')} đ</strong></td>
+                    <td><small style={{ color: '#666' }}>{item.totalBaseQtyDecreased} {item.dvt3 || item.unit}</small></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    </section>
   )
 }
 

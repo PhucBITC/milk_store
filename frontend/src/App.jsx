@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import AdminDashboard from './components/admin/AdminDashboard'
 import AuthCard from './components/auth/AuthCard'
 import BrandPanel from './components/auth/BrandPanel'
@@ -52,7 +54,9 @@ function App() {
       !maCongTy ||
       hienHd === ''
     ) {
-      setAuthMessage(t.authMessages.missingFields)
+      const msg = t.authMessages.missingFields
+      setAuthMessage(msg)
+      toast.warn(msg)
       return
     }
 
@@ -66,34 +70,43 @@ function App() {
         hienHd,
         maCuaHang,
       })
-      setAuthMessage(t.authMessages.registered)
+      const successMsg = t.authMessages.registered
+      setAuthMessage(successMsg)
+      toast.success(successMsg)
       navigate('/login')
     } catch (error) {
-      setAuthMessage(error.response?.data?.message || t.authMessages.registerFailed)
+      const errorMsg = error.response?.data?.message || t.authMessages.registerFailed
+      setAuthMessage(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
   const handleLogin = async ({ maTaiKhoan, matKhau }) => {
     if (!maTaiKhoan || !matKhau) {
-      setAuthMessage(t.authMessages.missingFields)
+      const msg = t.authMessages.missingFields
+      setAuthMessage(msg)
+      toast.warn(msg)
       return
     }
 
     try {
       const response = await loginUser({ maTaiKhoan, matKhau })
-      window.alert(t.authMessages.loginSuccess)
+      toast.success(t.authMessages.loginSuccess || 'Đăng nhập thành công!')
       setAuthMessage('')
       setCurrentUser(response.data.user)
       sessionStorage.setItem('milkstore-current-user', JSON.stringify(response.data.user))
       navigate(location.state?.from?.pathname || '/products')
     } catch {
-      setAuthMessage(t.authMessages.invalidLogin)
+      const errorMsg = t.authMessages.invalidLogin
+      setAuthMessage(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
   const handleLogout = () => {
     setCurrentUser(null)
     sessionStorage.removeItem('milkstore-current-user')
+    toast.info('Đã đăng xuất khỏi hệ thống.')
     navigate('/login')
   }
 
@@ -103,13 +116,16 @@ function App() {
     }
 
     return (
-      <AdminDashboard
-        accountEmail={currentUser.maTaiKhoan}
-        language={language}
-        t={t}
-        onLanguageChange={handleLanguageChange}
-        onLogout={handleLogout}
-      />
+      <>
+        <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+        <AdminDashboard
+          accountEmail={currentUser.maTaiKhoan}
+          language={language}
+          t={t}
+          onLanguageChange={handleLanguageChange}
+          onLogout={handleLogout}
+        />
+      </>
     )
   }
 
@@ -118,21 +134,24 @@ function App() {
   }
 
   return (
-    <main className="auth-shell">
-      <BrandPanel
-        language={language}
-        t={t}
-        onLanguageChange={handleLanguageChange}
-      />
-      <AuthCard
-        activePage={activePage}
-        authMessage={authMessage}
-        t={t}
-        onLogin={handleLogin}
-        onPageChange={handlePageChange}
-        onRegister={handleRegister}
-      />
-    </main>
+    <>
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+      <main className="auth-shell">
+        <BrandPanel
+          language={language}
+          t={t}
+          onLanguageChange={handleLanguageChange}
+        />
+        <AuthCard
+          activePage={activePage}
+          authMessage={authMessage}
+          t={t}
+          onLogin={handleLogin}
+          onPageChange={handlePageChange}
+          onRegister={handleRegister}
+        />
+      </main>
+    </>
   )
 }
 
