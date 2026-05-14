@@ -9,6 +9,7 @@ import {
 } from '../../services/nhaCungCapService'
 
 const emptyForm = {
+  maNhaCungCap: '',
   tenNhaCungCap: '',
   maSoThue: '',
   diaChi: '',
@@ -46,6 +47,7 @@ const fallbackLabels = {
     ngayTao: 'Ngày tạo',
   },
   placeholders: {
+    maNhaCungCap: 'VD: CongTyA_2026',
     tenNhaCungCap: 'VD: CÔNG TY SỮA ABC',
     maSoThue: 'VD: 0312345678',
     diaChi: 'VD: KCN Tân Bình, TP.HCM',
@@ -88,7 +90,7 @@ function NhaCungCapPage({ t = fallbackLabels }) {
     const { name, value } = event.target
     setFormData((current) => ({
       ...current,
-      [name]: name === 'tenNhaCungCap' ? value.toUpperCase() : value,
+      [name]: ['maNhaCungCap', 'tenNhaCungCap'].includes(name) ? value.toUpperCase() : value,
     }))
   }
 
@@ -109,7 +111,7 @@ function NhaCungCapPage({ t = fallbackLabels }) {
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      const errMsg = error.response?.data?.message || labels.messages.saveFailed
+      const errMsg = getErrorMessage(error, labels.messages.saveFailed)
       setMessage(errMsg)
       toast.error(errMsg)
     }
@@ -118,6 +120,7 @@ function NhaCungCapPage({ t = fallbackLabels }) {
   const handleEdit = (item) => {
     setEditingItem(item)
     setFormData({
+      maNhaCungCap: item.maNhaCungCap || '',
       tenNhaCungCap: item.tenNhaCungCap || '',
       maSoThue: item.maSoThue || '',
       diaChi: item.diaChi || '',
@@ -180,14 +183,19 @@ function NhaCungCapPage({ t = fallbackLabels }) {
       <div className="unit-panel">
         <h3>{editingItem ? labels.editTitle : labels.addTitle}</h3>
         <form className="nhom-chu-form" onSubmit={handleSubmit}>
-          <label>
+          <label className="nhom-chu-form-wide">
             {labels.fields.tenNhaCungCap}
             <input name="tenNhaCungCap" value={formData.tenNhaCungCap} onChange={handleChange} placeholder={labels.placeholders.tenNhaCungCap} required />
           </label>
 
           <label>
+            {labels.fields.maNhaCungCap}
+            <input name="maNhaCungCap" value={formData.maNhaCungCap} onChange={handleChange} placeholder={labels.placeholders.maNhaCungCap} pattern="[\p{L}\p{N}_-]{2,50}" title="Mã nhà cung cấp chỉ gồm chữ, số, dấu gạch dưới hoặc gạch ngang, từ 2 đến 50 ký tự." required readOnly={Boolean(editingItem)} />
+          </label>
+
+          <label>
             {labels.fields.maSoThue}
-            <input name="maSoThue" value={formData.maSoThue} onChange={handleChange} placeholder={labels.placeholders.maSoThue} />
+            <input name="maSoThue" value={formData.maSoThue} onChange={handleChange} placeholder={labels.placeholders.maSoThue} inputMode="numeric" pattern="(?:\d{10}|\d{13})" title="Mã số thuế phải gồm 10 hoặc 13 chữ số." />
           </label>
 
           <label>
@@ -197,7 +205,7 @@ function NhaCungCapPage({ t = fallbackLabels }) {
 
           <label>
             {labels.fields.soDt}
-            <input name="soDt" value={formData.soDt} onChange={handleChange} placeholder={labels.placeholders.soDt} />
+            <input name="soDt" value={formData.soDt} onChange={handleChange} placeholder={labels.placeholders.soDt} inputMode="numeric" pattern="\d{8,15}" title="SĐT phải gồm 8 đến 15 chữ số." />
           </label>
 
           <label>
@@ -277,6 +285,24 @@ function NhaCungCapPage({ t = fallbackLabels }) {
 
 function formatDateTime(value) {
   return value ? new Date(value).toLocaleString('vi-VN') : ''
+}
+
+function getErrorMessage(error, fallbackMessage) {
+  const data = error.response?.data
+  if (!data) {
+    return fallbackMessage
+  }
+
+  if (typeof data === 'string') {
+    return data
+  }
+
+  if (data.message) {
+    return data.message
+  }
+
+  const firstError = Object.values(data).find(Boolean)
+  return firstError || fallbackMessage
 }
 
 export default NhaCungCapPage

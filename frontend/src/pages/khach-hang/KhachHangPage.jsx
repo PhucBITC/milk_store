@@ -117,7 +117,7 @@ function KhachHangPage({ t = fallbackLabels }) {
       setEditingItem(null)
       await loadItems()
     } catch (error) {
-      const errMsg = error.response?.data?.message || labels.messages.saveFailed
+      const errMsg = getErrorMessage(error, labels.messages.saveFailed)
       setMessage(errMsg)
       toast.error(errMsg)
     }
@@ -197,7 +197,7 @@ function KhachHangPage({ t = fallbackLabels }) {
 
           <label>
             {labels.fields.maKhachHang}
-            <input name="maKhachHang" value={formData.maKhachHang} onChange={handleChange} placeholder={labels.placeholders.maKhachHang} required readOnly={Boolean(editingItem)} />
+            <input name="maKhachHang" value={formData.maKhachHang} onChange={handleChange} placeholder={labels.placeholders.maKhachHang} inputMode="numeric" pattern="\d{8,15}" title="Mã khách hàng là SĐT, gồm 8 đến 15 chữ số." required readOnly={Boolean(editingItem)} />
           </label>
 
           <label>
@@ -207,7 +207,7 @@ function KhachHangPage({ t = fallbackLabels }) {
 
           <label>
             {labels.fields.maSoThue}
-            <input name="maSoThue" value={formData.maSoThue} onChange={handleChange} placeholder={labels.placeholders.maSoThue} />
+            <input name="maSoThue" value={formData.maSoThue} onChange={handleChange} placeholder={labels.placeholders.maSoThue} inputMode="numeric" pattern="(?:\d{10}|\d{13})" title="Mã số thuế phải gồm 10 hoặc 13 chữ số." />
           </label>
 
           <label>
@@ -217,12 +217,12 @@ function KhachHangPage({ t = fallbackLabels }) {
 
           <label>
             {labels.fields.maQuanHeNganSach}
-            <input name="maQuanHeNganSach" value={formData.maQuanHeNganSach} onChange={handleChange} placeholder={labels.placeholders.maQuanHeNganSach} />
+            <input name="maQuanHeNganSach" value={formData.maQuanHeNganSach} onChange={handleChange} placeholder={labels.placeholders.maQuanHeNganSach} inputMode="numeric" pattern="\d{1,20}" title="Mã QHNS chỉ gồm chữ số, tối đa 20 ký tự." />
           </label>
 
           <label>
             {labels.fields.cccd}
-            <input name="cccd" value={formData.cccd} onChange={handleChange} placeholder={labels.placeholders.cccd} />
+            <input name="cccd" value={formData.cccd} onChange={handleChange} placeholder={labels.placeholders.cccd} inputMode="numeric" pattern="(?:\d{9}|\d{12})" title="CCCD/CMND phải gồm 9 hoặc 12 chữ số." />
           </label>
 
           <div className="unit-form-actions">
@@ -299,6 +299,24 @@ function KhachHangPage({ t = fallbackLabels }) {
 
 function formatDateTime(value) {
   return value ? new Date(value).toLocaleString('vi-VN') : ''
+}
+
+function getErrorMessage(error, fallbackMessage) {
+  const data = error.response?.data
+  if (!data) {
+    return fallbackMessage
+  }
+
+  if (typeof data === 'string') {
+    return data
+  }
+
+  if (data.message) {
+    return data.message
+  }
+
+  const firstError = Object.values(data).find(Boolean)
+  return firstError || fallbackMessage
 }
 
 export default KhachHangPage

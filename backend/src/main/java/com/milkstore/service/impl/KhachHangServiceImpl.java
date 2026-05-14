@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class KhachHangServiceImpl implements KhachHangService {
 
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "ngayTao");
+    private static final String PHONE_PATTERN = "\\d{8,15}";
+    private static final String TAX_CODE_PATTERN = "(?:\\d{10}|\\d{13})";
+    private static final String BUDGET_RELATION_CODE_PATTERN = "\\d{1,20}";
+    private static final String CITIZEN_ID_PATTERN = "(?:\\d{9}|\\d{12})";
 
     private final KhachHangRepository khachHangRepository;
 
@@ -90,10 +94,10 @@ public class KhachHangServiceImpl implements KhachHangService {
     private void applyRequest(KhachHang khachHang, KhachHangRequest request) {
         khachHang.setTenKhachHang(cleanText(request.getTenKhachHang()));
         khachHang.setSoDt(khachHang.getMaKhachHang());
-        khachHang.setMaSoThue(cleanOptionalText(request.getMaSoThue()));
+        khachHang.setMaSoThue(cleanOptionalPattern(request.getMaSoThue(), TAX_CODE_PATTERN, "MASOTHUE must have 10 or 13 digits"));
         khachHang.setDiaChi(cleanOptionalText(request.getDiaChi()));
-        khachHang.setMaQuanHeNganSach(cleanOptionalText(request.getMaQuanHeNganSach()));
-        khachHang.setCccd(cleanOptionalText(request.getCccd()));
+        khachHang.setMaQuanHeNganSach(cleanOptionalPattern(request.getMaQuanHeNganSach(), BUDGET_RELATION_CODE_PATTERN, "MAQUANHENGANSACH must have digits only, up to 20 characters"));
+        khachHang.setCccd(cleanOptionalPattern(request.getCccd(), CITIZEN_ID_PATTERN, "CCCD must have 9 or 12 digits"));
     }
 
     private KhachHang findByMaKhachHang(String maKhachHang) {
@@ -125,6 +129,10 @@ public class KhachHangServiceImpl implements KhachHangService {
             throw new IllegalArgumentException("MAKHACHHANG is required");
         }
 
+        if (!cleanValue.matches(PHONE_PATTERN)) {
+            throw new IllegalArgumentException("MAKHACHHANG must have 8 to 15 digits");
+        }
+
         return cleanValue;
     }
 
@@ -134,5 +142,18 @@ public class KhachHangServiceImpl implements KhachHangService {
         }
 
         return value.trim();
+    }
+
+    private String cleanOptionalPattern(String value, String pattern, String message) {
+        String cleanValue = cleanOptionalText(value);
+        if (cleanValue == null) {
+            return null;
+        }
+
+        if (!cleanValue.matches(pattern)) {
+            throw new IllegalArgumentException(message);
+        }
+
+        return cleanValue;
     }
 }

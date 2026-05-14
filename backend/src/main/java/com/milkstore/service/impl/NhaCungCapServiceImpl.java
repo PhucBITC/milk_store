@@ -7,9 +7,7 @@ import com.milkstore.exception.ResourceNotFoundException;
 import com.milkstore.repository.NhaCungCapRepository;
 import com.milkstore.service.NhaCungCapService;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class NhaCungCapServiceImpl implements NhaCungCapService {
 
-    private static final DateTimeFormatter CODE_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyHHmmss");
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "ngayTao");
+    private static final String SUPPLIER_CODE_PATTERN = "[\\p{L}\\p{N}_-]{2,50}";
+    private static final String PHONE_PATTERN = "\\d{8,15}";
+    private static final String TAX_CODE_PATTERN = "(?:\\d{10}|\\d{13})";
 
     private final NhaCungCapRepository nhaCungCapRepository;
 
@@ -65,9 +65,13 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
     @Override
     public NhaCungCapResponse create(NhaCungCapRequest request) {
         LocalDateTime now = LocalDateTime.now();
+        String maNhaCungCap = cleanSupplierCode(request.getMaNhaCungCap());
+        if (nhaCungCapRepository.existsById(maNhaCungCap)) {
+            throw new IllegalArgumentException("MANHACUNGCAP already exists: " + maNhaCungCap);
+        }
 
         NhaCungCap nhaCungCap = new NhaCungCap();
-        nhaCungCap.setMaNhaCungCap(generateCode(now));
+        nhaCungCap.setMaNhaCungCap(maNhaCungCap);
         applyRequest(nhaCungCap, request);
         nhaCungCap.setNgayTao(now);
 
@@ -88,25 +92,10 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
 
     private void applyRequest(NhaCungCap nhaCungCap, NhaCungCapRequest request) {
         nhaCungCap.setTenNhaCungCap(cleanText(request.getTenNhaCungCap()));
-        nhaCungCap.setMaSoThue(cleanOptionalText(request.getMaSoThue()));
+        nhaCungCap.setMaSoThue(cleanOptionalPattern(request.getMaSoThue(), TAX_CODE_PATTERN, "MASOTHUE must have 10 or 13 digits"));
         nhaCungCap.setDiaChi(cleanOptionalText(request.getDiaChi()));
-        nhaCungCap.setSoDt(cleanOptionalText(request.getSoDt()));
+        nhaCungCap.setSoDt(cleanOptionalPattern(request.getSoDt(), PHONE_PATTERN, "SODT must have 8 to 15 digits"));
         nhaCungCap.setNhanVienSale(cleanOptionalText(request.getNhanVienSale()));
-    }
-
-    private String generateCode(LocalDateTime now) {
-        String baseCode = "NCC" + now.format(CODE_FORMATTER);
-        if (!nhaCungCapRepository.existsById(baseCode)) {
-            return baseCode;
-        }
-
-        String generatedCode;
-        do {
-            int suffix = ThreadLocalRandom.current().nextInt(10, 100);
-            generatedCode = baseCode + suffix;
-        } while (nhaCungCapRepository.existsById(generatedCode));
-
-        return generatedCode;
     }
 
     private NhaCungCap findByMaNhaCungCap(String maNhaCungCap) {
@@ -131,11 +120,37 @@ public class NhaCungCapServiceImpl implements NhaCungCapService {
         return value == null ? null : value.trim().toUpperCase();
     }
 
+    private String cleanSupplierCode(String value) {
+        String cleanValue = cleanText(value);
+        if (cleanValue == null || cleanValue.isBlank()) {
+            throw new IllegalArgumentException("MANHACUNGCAP is required");
+        }
+
+        if (!cleanValue.matches(SUPPLIER_CODE_PATTERN)) {
+            throw new IllegalArgumentException("MANHACUNGCAP only allows letters, numbers, underscore, hyphen, 2 to 50 characters");
+        }
+
+        return cleanValue;
+    }
+
     private String cleanOptionalText(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
 
         return value.trim();
+    }
+
+    private String cleanOptionalPattern(String value, String pattern, String message) {
+        String cleanValue = cleanOptionalText(value);
+        if (cleanValue == null) {
+            return null;
+        }
+
+        if (!cleanValue.matches(pattern)) {
+            throw new IllegalArgumentException(message);
+        }
+
+        return cleanValue;
     }
 }

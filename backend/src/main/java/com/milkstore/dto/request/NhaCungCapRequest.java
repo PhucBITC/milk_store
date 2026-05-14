@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 
 public class NhaCungCapRequest {
 
+    @NotBlank(message = "MANHACUNGCAP is required")
+    private String maNhaCungCap;
+
     @NotBlank(message = "TENNHACUNGCAP is required")
     private String tenNhaCungCap;
 
@@ -11,6 +14,14 @@ public class NhaCungCapRequest {
     private String diaChi;
     private String soDt;
     private String nhanVienSale;
+
+    public String getMaNhaCungCap() {
+        return maNhaCungCap;
+    }
+
+    public void setMaNhaCungCap(String maNhaCungCap) {
+        this.maNhaCungCap = maNhaCungCap;
+    }
 
     public String getTenNhaCungCap() {
         return tenNhaCungCap;

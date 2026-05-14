@@ -88,7 +88,7 @@ export const translations = {
         help: 'Hướng dẫn',
       },
       quickActions: [
-        'BÁN HÀNG',
+        'Bán hàng',
         'Báo cáo bán hàng',
         'Báo cáo hoạt động trong ngày',
         'Báo cáo bán hàng theo nhóm',
@@ -269,6 +269,7 @@ export const translations = {
         ngayTao: 'Ngày tạo',
       },
       placeholders: {
+        maNhaCungCap: 'VD: CongTyA_2026',
         tenNhaCungCap: 'VD: CÔNG TY SỮA ABC',
         maSoThue: 'VD: 0312345678',
         diaChi: 'VD: KCN Tân Bình, TP.HCM',
@@ -655,6 +656,7 @@ export const translations = {
         ngayTao: 'Created at',
       },
       placeholders: {
+        maNhaCungCap: 'Example: CompanyA_2026',
         tenNhaCungCap: 'Example: ABC DAIRY COMPANY',
         maSoThue: 'Example: 0312345678',
         diaChi: 'Example: Tan Binh Industrial Park, HCMC',
