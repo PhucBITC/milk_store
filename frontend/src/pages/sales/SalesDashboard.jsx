@@ -1,7 +1,9 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { getHangHoaList, updateHangHoa } from '../../services/hangHoaService'
+import { createKhachHang, getKhachHangList } from '../../services/khachHangService'
+import ConfirmationModal from '../../components/shared/ConfirmationModal'
 import './SalesDashboard.css'
 
 const sampleProducts = [
@@ -38,10 +40,31 @@ function createInvoiceSnapshot() {
 
 function SalesDashboard({ t }) {
   const [dbProducts, setDbProducts] = useState([])
+  const [customers, setCustomers] = useState([])
   const [cartItems, setCartItems] = useState([])
   const [selectedProduct, setSelectedProduct] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState('')
+  const [saleMeta, setSaleMeta] = useState({
+    warehouse: 'Kho Tổng',
+    salesStaff: '',
+    customerPhone: '',
+    customerName: '',
+    customerAddress: '',
+    invoiceNote: '',
+    orderMode: 'sale',
+    noPrint: false,
+    discountAmount: '0',
+    discountPercent: '0',
+    oldDebt: '0',
+  })
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  })
   const navigate = useNavigate()
+  const lastProductToastRef = useRef({ code: '', message: '', time: 0 })
 
   // Tải danh sách Hàng hóa thực tế từ DB kèm theo cấu trúc giá 3 tầng
   useEffect(() => {
@@ -50,6 +73,20 @@ function SalesDashboard({ t }) {
       .then((res) => {
         if (isMounted) {
           setDbProducts(res.data)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    getKhachHangList()
+      .then((res) => {
+        if (isMounted) {
+          setCustomers(res.data)
         }
       })
       .catch(() => {})
@@ -127,7 +164,7 @@ function SalesDashboard({ t }) {
           ...targetItem,
           quantity: currentQty + 1,
         }
-        toast.success(`Đã tăng số lượng mặt hàng [${code}]`)
+        notifyProductToast(lastProductToastRef, code, `Đã tăng số lượng mặt hàng [${code}]`)
         return updated
       }
 
@@ -149,7 +186,7 @@ function SalesDashboard({ t }) {
         return current
       }
 
-      toast.success(`Đã thêm mặt hàng [${code}] vào hóa đơn`)
+      notifyProductToast(lastProductToastRef, code, `Đã thêm mặt hàng [${code}] vào hóa đơn`)
       const uniqueId = `${code}-${Date.now()}`
       return [...current, { ...found, cartRowId: uniqueId, selectedTier: initialTier, quantity: 1 }]
     })
@@ -198,8 +235,16 @@ function SalesDashboard({ t }) {
   const handleUpdateQty = (cartRowId, delta) => {
     // Trường hợp bấm nút Xóa (delta rất nhỏ)
     if (delta <= -999999) {
-      setCartItems((current) => current.filter((it) => it.cartRowId !== cartRowId))
-      toast.info('Đã xóa mặt hàng khỏi hóa đơn')
+      setModalConfig({
+        isOpen: true,
+        title: 'Xác nhận xóa',
+        message: t.admin.deleteConfirm || 'Bạn có chắc chắn muốn xóa mặt hàng này khỏi hóa đơn?',
+        onConfirm: () => {
+          setCartItems((current) => current.filter((it) => it.cartRowId !== cartRowId))
+          toast.info('Đã xóa mặt hàng khỏi hóa đơn')
+          setModalConfig((prev) => ({ ...prev, isOpen: false }))
+        },
+      })
       return
     }
 
@@ -322,6 +367,122 @@ function SalesDashboard({ t }) {
     return acc + appliedPrice * safeQty
   }, 0)
 
+  const discountAmount = parseCurrencyNumber(saleMeta.discountAmount)
+  const discountPercent = clampNumber(Number(saleMeta.discountPercent) || 0, 0, 100)
+  const oldDebtAmount = parseCurrencyNumber(saleMeta.oldDebt)
+  const vatAmount = 0
+  const finalTotal = Math.max(0, totalPrice - discountAmount - Math.round(totalPrice * discountPercent / 100) + vatAmount)
+  const amountInWords = numberToVietnamese(finalTotal)
+  const cleanCustomerPhone = saleMeta.customerPhone.trim()
+  const matchedCustomer = cleanCustomerPhone
+    ? customers.find((customer) => [customer.maKhachHang, customer.soDt].includes(cleanCustomerPhone))
+    : null
+  const customerSuggestions = cleanCustomerPhone.length >= 2
+    ? customers
+        .filter((customer) =>
+          [customer.maKhachHang, customer.soDt]
+            .filter(Boolean)
+            .some((phone) => phone.startsWith(cleanCustomerPhone))
+        )
+        .slice(0, 10)
+    : []
+  const isNewCustomer = cleanCustomerPhone.length >= 8 && !matchedCustomer
+
+  const handleMetaChange = (event) => {
+    const { name, value, type, checked } = event.target
+    const nextValue = name === 'customerPhone' ? value.replace(/\D/g, '') : value
+    setSaleMeta((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : nextValue,
+      ...(name === 'customerPhone' ? getCustomerInfoByPhone(nextValue, customers) : {}),
+    }))
+  }
+
+  const handleAddNewCustomer = async () => {
+    if (!cleanCustomerPhone) {
+      toast.warn('Vui lòng nhập số điện thoại khách hàng')
+      return
+    }
+
+    if (!saleMeta.customerName.trim()) {
+      toast.warn('Vui lòng nhập tên khách hàng')
+      return
+    }
+
+    try {
+      const response = await createKhachHang({
+        maKhachHang: cleanCustomerPhone,
+        tenKhachHang: saleMeta.customerName,
+        soDt: cleanCustomerPhone,
+        maSoThue: '',
+        diaChi: saleMeta.customerAddress,
+        maQuanHeNganSach: '',
+        cccd: '',
+      })
+      setCustomers((current) => [response.data, ...current])
+      setSaleMeta((current) => ({
+        ...current,
+        customerName: response.data.tenKhachHang || current.customerName,
+        customerAddress: response.data.diaChi || current.customerAddress,
+      }))
+      toast.success('Đã thêm khách hàng mới')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể thêm khách hàng mới'))
+    }
+  }
+
+  const handleCancelNewCustomer = () => {
+    setSaleMeta((current) => ({
+      ...current,
+      customerPhone: '',
+      customerName: '',
+      customerAddress: '',
+    }))
+  }
+
+  const handleSelectCustomer = (customer) => {
+    const phone = customer.maKhachHang || customer.soDt || ''
+    setSaleMeta((current) => ({
+      ...current,
+      customerPhone: phone,
+      customerName: customer.tenKhachHang || '',
+      customerAddress: customer.diaChi || '',
+    }))
+  }
+
+  const handleUpdateItemNote = (cartRowId, note) => {
+    setCartItems((current) =>
+      current.map((item) => item.cartRowId === cartRowId ? { ...item, lineNote: note } : item)
+    )
+  }
+
+  const handleSaveDraft = (slot = '1') => {
+    const draft = {
+      savedAt: new Date().toISOString(),
+      saleMeta,
+      cartItems,
+    }
+    localStorage.setItem(`milkstore_sales_draft_${slot}`, JSON.stringify(draft))
+    toast.success(`Đã lưu tạm đơn vào ô ${slot}`)
+  }
+
+  const handleSaveOrder = () => {
+    const pendingOrders = JSON.parse(localStorage.getItem('milkstore_pending_orders') || '[]')
+    const order = {
+      id: `DH${Date.now().toString().slice(-6)}`,
+      createdAt: new Date().toISOString(),
+      saleMeta,
+      items: cartItems,
+      totalAmount: finalTotal,
+    }
+    localStorage.setItem('milkstore_pending_orders', JSON.stringify([order, ...pendingOrders]))
+    toast.success(`Đã lưu đặt hàng ${order.id}`)
+  }
+
+  const handlePreviewInvoice = () => {
+    toast.info(`Xem trước: ${cartItems.length} mặt hàng, tổng thanh toán ${finalTotal.toLocaleString('vi-VN')} đ`)
+  }
+
   // Gọi API trừ kho và xuất hóa đơn
   const handleCheckout = async () => {
     if (cartItems.length === 0) return
@@ -386,17 +547,23 @@ function SalesDashboard({ t }) {
     const invoiceData = {
       id: invoiceId,
       createdAt: invoiceSnapshot.createdAt,
+      saleMeta,
       items: finalItems,
-      totalAmount: totalPrice,
+      subtotalAmount: totalPrice,
+      discountAmount,
+      discountPercent,
+      vatAmount,
+      oldDebtAmount,
+      totalAmount: finalTotal,
       totalCost: totalCost,
-      grossProfit: totalPrice - totalCost,
+      grossProfit: finalTotal - totalCost,
     }
 
     const currentInvoices = JSON.parse(localStorage.getItem('milkstore_invoices') || '[]')
     localStorage.setItem('milkstore_invoices', JSON.stringify([invoiceData, ...currentInvoices]))
 
     // 5. Cập nhật giao diện
-    const successMsg = `Thanh toán thành công đơn hàng ${invoiceId} trị giá ${totalPrice.toLocaleString('vi-VN')} đ!`
+    const successMsg = `Thanh toán thành công đơn hàng ${invoiceId} trị giá ${finalTotal.toLocaleString('vi-VN')} đ!`
     setCheckoutMessage(successMsg)
     toast.success(successMsg)
     setCartItems([])
@@ -452,8 +619,85 @@ function SalesDashboard({ t }) {
         ))}
       </section>
 
-      <section className="sales-layout">
-        <div className="sales-main">
+      <section className="legacy-sale-panel" aria-label="Thông tin bán hàng">
+        <div className="legacy-sale-grid">
+          <label>
+            Kho
+            <select name="warehouse" value={saleMeta.warehouse} onChange={handleMetaChange}>
+              <option value="Kho Tổng">Kho Tổng</option>
+              <option value="Kho A">Kho A</option>
+              <option value="Kho B">Kho B</option>
+            </select>
+          </label>
+          <label>
+            Nhân viên bán hàng
+            <input name="salesStaff" value={saleMeta.salesStaff} onChange={handleMetaChange} placeholder="vd: Nhân viên bán hàng" />
+          </label>
+          <div className="legacy-button-row">
+            <button type="button" onClick={() => handleSaveDraft('1')}>Lưu tạm 1</button>
+            <button type="button" onClick={() => handleSaveDraft('2')}>Lưu tạm 2</button>
+            <button type="button" onClick={() => setSaleMeta((current) => ({ ...current, orderMode: 'gift' }))}>Tặng</button>
+            <button type="button" onClick={() => setSaleMeta((current) => ({ ...current, orderMode: 'return' }))}>Trả hàng</button>
+          </div>
+
+          <div className="legacy-customer-search">
+            <span>Số điện thoại</span>
+            <input name="customerPhone" value={saleMeta.customerPhone} onChange={handleMetaChange} placeholder="vd: 0906532999" inputMode="numeric" />
+            {customerSuggestions.length > 0 && !matchedCustomer ? (
+              <div className="customer-suggestions">
+                {customerSuggestions.map((customer) => (
+                  <button
+                    key={customer.maKhachHang}
+                    type="button"
+                    onClick={() => handleSelectCustomer(customer)}
+                  >
+                    <strong>{customer.maKhachHang || customer.soDt}</strong>
+                    <span>{customer.tenKhachHang || 'Khách hàng'}</span>
+                    <small>{customer.diaChi || 'Chưa có địa chỉ'}</small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <label>
+            Tên khách hàng
+            <input name="customerName" value={saleMeta.customerName} onChange={handleMetaChange} placeholder="vd: Nguyễn Văn A" readOnly={Boolean(matchedCustomer)} />
+          </label>
+          <label>
+            Địa chỉ
+            <input name="customerAddress" value={saleMeta.customerAddress} onChange={handleMetaChange} placeholder="vd: Địa chỉ" readOnly={Boolean(matchedCustomer)} />
+          </label>
+          {isNewCustomer ? (
+            <div className="new-customer-actions">
+              <strong>Khách hàng mới</strong>
+              <button type="button" onClick={handleAddNewCustomer}>Thêm</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalConfig({
+                    isOpen: true,
+                    title: 'Hủy thông tin',
+                    message: 'Bạn có chắc chắn muốn xóa các thông tin khách hàng mới đã nhập?',
+                    onConfirm: () => {
+                      handleCancelNewCustomer()
+                      setModalConfig((prev) => ({ ...prev, isOpen: false }))
+                    },
+                  })
+                }}
+              >
+                Hủy
+              </button>
+            </div>
+          ) : null}
+          <label className="legacy-wide">
+            Ghi chú hóa đơn
+            <input name="invoiceNote" value={saleMeta.invoiceNote} onChange={handleMetaChange} placeholder="vd: Ghi chú" />
+          </label>
+        </div>
+      </section>
+
+      <section className="sales-stack">
+        <div className="sales-products-panel">
           <div
             className="sales-toolbar"
             style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}
@@ -506,13 +750,14 @@ function SalesDashboard({ t }) {
                   <th>Đơn giá áp dụng</th>
                   <th>Thành tiền</th>
                   <th>Ý nghĩa trừ kho</th>
+                  <th>Ghi chú</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {cartItems.length === 0 ? (
                   <tr>
-                    <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan="10" style={{ textAlign: 'center', padding: '2rem' }}>
                       {t.admin.emptyText || 'Hóa đơn chưa có sản phẩm. Vui lòng chọn sản phẩm ở trên.'}
                     </td>
                   </tr>
@@ -613,6 +858,14 @@ function SalesDashboard({ t }) {
                           </span>
                         </td>
                         <td>
+                          <input
+                            className="line-note-input"
+                            value={item.lineNote || ''}
+                            onChange={(e) => handleUpdateItemNote(item.cartRowId, e.target.value)}
+                            placeholder="Ghi chú"
+                          />
+                        </td>
+                        <td>
                           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                             {item.dvt1 || item.dvt2 ? (
                               <button
@@ -658,63 +911,166 @@ function SalesDashboard({ t }) {
           </div>
         </div>
 
-        <aside className="checkout-panel" aria-label={t.admin.payment}>
-          <div className="checkout-header">
-            <span>{t.admin.payment}</span>
-            <strong>{totalPrice.toLocaleString('vi-VN')} đ</strong>
-          </div>
-
-          <label className="admin-checkbox">
-            <input type="checkbox" />
-            {t.admin.noPrint}
-          </label>
-
-          <div className="discount-grid">
-            <label>
-              {t.admin.discount}
-              <input value="0" readOnly />
-            </label>
-            <label>
-              {t.admin.percentDiscount}
-              <input value="0%" readOnly />
+        <aside className="payment-panel" aria-label={t.admin.payment}>
+          <div className="payment-total-card">
+            <div className="checkout-header">
+              <span>{t.admin.payment}</span>
+              <strong>{finalTotal.toLocaleString('vi-VN')} đ</strong>
+            </div>
+            <label className="admin-checkbox">
+              <input name="noPrint" type="checkbox" checked={saleMeta.noPrint} onChange={handleMetaChange} />
+              {t.admin.noPrint}
             </label>
           </div>
 
-          <p className="amount-text">{t.admin.amountInWords}</p>
+          <div className="payment-controls-card">
+            <div className="discount-grid">
+              <label>
+                {t.admin.discount}
+                <input name="discountAmount" value={saleMeta.discountAmount} onChange={handleMetaChange} inputMode="numeric" />
+              </label>
+              <label>
+                {t.admin.percentDiscount}
+                <input name="discountPercent" value={saleMeta.discountPercent} onChange={handleMetaChange} inputMode="decimal" />
+              </label>
+            </div>
 
-          <div className="payment-actions">
-            <button
-              type="button"
-              className="secondary-admin-action"
-              onClick={() => {
-                if (cartItems.length > 0) {
-                  setCartItems([])
-                  toast.info('Đã làm trống các mặt hàng trong hóa đơn')
-                }
-              }}
-            >
-              {t.admin.deleteBill || 'Xóa đơn'}
-            </button>
-            <button
-              type="button"
-              className="pay-action"
-              onClick={handleCheckout}
-              disabled={cartItems.length === 0}
-              style={{
-                opacity: cartItems.length === 0 ? 0.5 : 1,
-                cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {t.admin.payNow || 'F12 Thanh toán'}
-            </button>
+            <div className="payment-summary">
+              <span>Tạm tính</span><strong>{totalPrice.toLocaleString('vi-VN')} đ</strong>
+              <span>VAT</span><strong>{vatAmount.toLocaleString('vi-VN')} đ</strong>
+              <span>Nợ cũ</span><input name="oldDebt" value={saleMeta.oldDebt} onChange={handleMetaChange} inputMode="numeric" />
+              <span>Tiền TT</span><strong>{finalTotal.toLocaleString('vi-VN')} đ</strong>
+            </div>
+          </div>
+
+          <div className="payment-finish-card">
+            <p className="amount-text">Bằng chữ: {amountInWords}</p>
+
+            <div className="payment-actions">
+              <button type="button" className="secondary-admin-action" onClick={() => toast.info('Đã gửi lệnh mở két')}>
+                Mở két
+              </button>
+              <button type="button" className="secondary-admin-action" onClick={handleSaveOrder} disabled={cartItems.length === 0}>
+                Lưu đặt hàng
+              </button>
+              <button type="button" className="secondary-admin-action" onClick={handlePreviewInvoice}>
+                F10 Xem trước
+              </button>
+              <button
+                type="button"
+                className="secondary-admin-action"
+                onClick={() => {
+                  if (cartItems.length > 0) {
+                    setModalConfig({
+                      isOpen: true,
+                      title: 'Xóa đơn hàng',
+                      message: t.admin.deleteBillConfirm || 'Bạn có chắc chắn muốn xóa toàn bộ hóa đơn này?',
+                      onConfirm: () => {
+                        setCartItems([])
+                        toast.info('Đã làm trống các mặt hàng trong hóa đơn')
+                        setModalConfig((prev) => ({ ...prev, isOpen: false }))
+                      },
+                    })
+                  }
+                }}
+              >
+                {t.admin.deleteBill || 'Xóa đơn'}
+              </button>
+              <button
+                type="button"
+                className="pay-action"
+                onClick={handleCheckout}
+                disabled={cartItems.length === 0}
+                style={{
+                  opacity: cartItems.length === 0 ? 0.5 : 1,
+                  cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {t.admin.payNow || 'F12 Thanh toán'}
+              </button>
+            </div>
           </div>
         </aside>
       </section>
+
+      <ConfirmationModal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </>
   )
 }
 
+function parseCurrencyNumber(value) {
+  return Number(String(value || '0').replace(/[^\d]/g, '')) || 0
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function notifyProductToast(lastToastRef, code, message) {
+  const now = Date.now()
+  const lastToast = lastToastRef.current
+  if (
+    lastToast.code === code &&
+    lastToast.message === message &&
+    now - lastToast.time < 500
+  ) {
+    return
+  }
+
+  lastToastRef.current = { code, message, time: now }
+  toast.success(message)
+}
+
+function numberToVietnamese(value) {
+  const amount = Number(value) || 0
+  if (amount === 0) {
+    return 'Không đồng'
+  }
+
+  return `${amount.toLocaleString('vi-VN')} đồng`
+}
+
+function getCustomerInfoByPhone(phone, customers) {
+  const cleanPhone = phone.trim()
+  const matchedCustomer = cleanPhone
+    ? customers.find((customer) => [customer.maKhachHang, customer.soDt].includes(cleanPhone))
+    : null
+
+  if (!matchedCustomer) {
+    return {
+      customerName: '',
+      customerAddress: '',
+    }
+  }
+
+  return {
+    customerName: matchedCustomer.tenKhachHang || '',
+    customerAddress: matchedCustomer.diaChi || '',
+  }
+}
+
+function getErrorMessage(error, fallbackMessage) {
+  const data = error.response?.data
+  if (!data) {
+    return fallbackMessage
+  }
+
+  if (typeof data === 'string') {
+    return data
+  }
+
+  if (data.message) {
+    return data.message
+  }
+
+  const firstError = Object.values(data).find(Boolean)
+  return firstError || fallbackMessage
+}
+
 export default SalesDashboard
-
-
-

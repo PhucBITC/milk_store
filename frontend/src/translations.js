@@ -108,6 +108,8 @@ export const translations = {
       preview: 'F10 Xem trước',
       payNow: 'F12 Thanh toán',
       deleteBill: 'Xóa đơn',
+      deleteConfirm: 'Bạn có chắc chắn muốn xóa mặt hàng này khỏi hóa đơn?',
+      deleteBillConfirm: 'Bạn có chắc chắn muốn xóa toàn bộ hóa đơn này?',
     },
     nhomChu: {
       menuTitle: 'Nhóm chủ',
@@ -495,6 +497,8 @@ export const translations = {
       preview: 'F10 Preview',
       payNow: 'F12 Pay',
       deleteBill: 'Delete bill',
+      deleteConfirm: 'Are you sure you want to remove this item from the invoice?',
+      deleteBillConfirm: 'Are you sure you want to clear the entire invoice?',
     },
     nhomChu: {
       menuTitle: 'Owner groups',
