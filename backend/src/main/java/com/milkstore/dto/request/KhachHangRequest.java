@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 
 public class KhachHangRequest {
 
+    @NotBlank(message = "MAKHACHHANG is required")
+    private String maKhachHang;
+
     @NotBlank(message = "TENKHACHHANG is required")
     private String tenKhachHang;
 
@@ -12,6 +15,14 @@ public class KhachHangRequest {
     private String diaChi;
     private String maQuanHeNganSach;
     private String cccd;
+
+    public String getMaKhachHang() {
+        return maKhachHang;
+    }
+
+    public void setMaKhachHang(String maKhachHang) {
+        this.maKhachHang = maKhachHang;
+    }
 
     public String getTenKhachHang() {
         return tenKhachHang;

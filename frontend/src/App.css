@@ -955,6 +955,10 @@
   font-weight: 800;
 }
 
+.nhom-chu-form-wide {
+  grid-column: 1 / -1;
+}
+
 .nhom-chu-form input,
 .nhom-chu-form select,
 .nhom-chu-toolbar input {

@@ -7,9 +7,7 @@ import com.milkstore.exception.ResourceNotFoundException;
 import com.milkstore.repository.KhachHangRepository;
 import com.milkstore.service.KhachHangService;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class KhachHangServiceImpl implements KhachHangService {
 
-    private static final DateTimeFormatter CODE_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyHHmmss");
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "ngayTao");
 
     private final KhachHangRepository khachHangRepository;
@@ -65,9 +62,13 @@ public class KhachHangServiceImpl implements KhachHangService {
     @Override
     public KhachHangResponse create(KhachHangRequest request) {
         LocalDateTime now = LocalDateTime.now();
+        String maKhachHang = cleanCode(request.getMaKhachHang());
+        if (khachHangRepository.existsById(maKhachHang)) {
+            throw new IllegalArgumentException("MAKHACHHANG already exists: " + maKhachHang);
+        }
 
         KhachHang khachHang = new KhachHang();
-        khachHang.setMaKhachHang(generateCode(now));
+        khachHang.setMaKhachHang(maKhachHang);
         applyRequest(khachHang, request);
         khachHang.setNgayTao(now);
 
@@ -88,26 +89,11 @@ public class KhachHangServiceImpl implements KhachHangService {
 
     private void applyRequest(KhachHang khachHang, KhachHangRequest request) {
         khachHang.setTenKhachHang(cleanText(request.getTenKhachHang()));
-        khachHang.setSoDt(cleanOptionalText(request.getSoDt()));
+        khachHang.setSoDt(khachHang.getMaKhachHang());
         khachHang.setMaSoThue(cleanOptionalText(request.getMaSoThue()));
         khachHang.setDiaChi(cleanOptionalText(request.getDiaChi()));
         khachHang.setMaQuanHeNganSach(cleanOptionalText(request.getMaQuanHeNganSach()));
         khachHang.setCccd(cleanOptionalText(request.getCccd()));
-    }
-
-    private String generateCode(LocalDateTime now) {
-        String baseCode = "KH" + now.format(CODE_FORMATTER);
-        if (!khachHangRepository.existsById(baseCode)) {
-            return baseCode;
-        }
-
-        String generatedCode;
-        do {
-            int suffix = ThreadLocalRandom.current().nextInt(10, 100);
-            generatedCode = baseCode + suffix;
-        } while (khachHangRepository.existsById(generatedCode));
-
-        return generatedCode;
     }
 
     private KhachHang findByMaKhachHang(String maKhachHang) {
@@ -131,6 +117,15 @@ public class KhachHangServiceImpl implements KhachHangService {
 
     private String cleanText(String value) {
         return value == null ? null : value.trim().toUpperCase();
+    }
+
+    private String cleanCode(String value) {
+        String cleanValue = cleanText(value);
+        if (cleanValue == null || cleanValue.isBlank()) {
+            throw new IllegalArgumentException("MAKHACHHANG is required");
+        }
+
+        return cleanValue;
     }
 
     private String cleanOptionalText(String value) {

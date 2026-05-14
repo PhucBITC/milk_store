@@ -221,6 +221,7 @@ export const translations = {
         ngayTao: 'Ngày tạo',
       },
       placeholders: {
+        maKhachHang: 'VD: KH001',
         tenKhachHang: 'VD: CÔNG TY TNHH ABC',
         soDt: 'VD: 0901234567',
         maSoThue: 'VD: 0312345678',
@@ -606,6 +607,7 @@ export const translations = {
         ngayTao: 'Created at',
       },
       placeholders: {
+        maKhachHang: 'Example: KH001',
         tenKhachHang: 'Example: ABC COMPANY LIMITED',
         soDt: 'Example: 0901234567',
         maSoThue: 'Example: 0312345678',

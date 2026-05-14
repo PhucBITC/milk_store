@@ -9,6 +9,7 @@ import {
 } from '../../services/khachHangService'
 
 const emptyForm = {
+  maKhachHang: '',
   tenKhachHang: '',
   soDt: '',
   maSoThue: '',
@@ -48,6 +49,7 @@ const fallbackLabels = {
     ngayTao: 'Ngày tạo',
   },
   placeholders: {
+    maKhachHang: 'VD: KH001',
     tenKhachHang: 'VD: CÔNG TY TNHH ABC',
     soDt: 'VD: 0901234567',
     maSoThue: 'VD: 0312345678',
@@ -89,9 +91,12 @@ function KhachHangPage({ t = fallbackLabels }) {
 
   const handleChange = (event) => {
     const { name, value } = event.target
+    const nextValue = ['maKhachHang', 'tenKhachHang'].includes(name) ? value.toUpperCase() : value
+
     setFormData((current) => ({
       ...current,
-      [name]: name === 'tenKhachHang' ? value.toUpperCase() : value,
+      [name]: nextValue,
+      ...(name === 'maKhachHang' ? { soDt: nextValue } : {}),
     }))
   }
 
@@ -121,6 +126,7 @@ function KhachHangPage({ t = fallbackLabels }) {
   const handleEdit = (item) => {
     setEditingItem(item)
     setFormData({
+      maKhachHang: item.maKhachHang || '',
       tenKhachHang: item.tenKhachHang || '',
       soDt: item.soDt || '',
       maSoThue: item.maSoThue || '',
@@ -184,14 +190,19 @@ function KhachHangPage({ t = fallbackLabels }) {
       <div className="unit-panel">
         <h3>{editingItem ? labels.editTitle : labels.addTitle}</h3>
         <form className="nhom-chu-form" onSubmit={handleSubmit}>
-          <label>
+          <label className="nhom-chu-form-wide">
             {labels.fields.tenKhachHang}
             <input name="tenKhachHang" value={formData.tenKhachHang} onChange={handleChange} placeholder={labels.placeholders.tenKhachHang} required />
           </label>
 
           <label>
+            {labels.fields.maKhachHang}
+            <input name="maKhachHang" value={formData.maKhachHang} onChange={handleChange} placeholder={labels.placeholders.maKhachHang} required readOnly={Boolean(editingItem)} />
+          </label>
+
+          <label>
             {labels.fields.soDt}
-            <input name="soDt" value={formData.soDt} onChange={handleChange} placeholder={labels.placeholders.soDt} />
+            <input name="soDt" value={formData.soDt} placeholder={labels.placeholders.soDt} readOnly />
           </label>
 
           <label>
