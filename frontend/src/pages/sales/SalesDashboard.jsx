@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { getHangHoaList, updateHangHoa } from '../../services/hangHoaService'
 import { createKhachHang, getKhachHangList } from '../../services/khachHangService'
 import ConfirmationModal from '../../components/shared/ConfirmationModal'
+import InvoicePreviewModal from '../../components/shared/InvoicePreviewModal'
 import './SalesDashboard.css'
 
 const sampleProducts = [
@@ -63,8 +64,19 @@ function SalesDashboard({ t }) {
     message: '',
     onConfirm: () => {},
   })
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [drafts, setDrafts] = useState(() => {
+    return JSON.parse(localStorage.getItem('milkstore_sales_drafts') || '[]')
+  })
+  const [showDraftList, setShowDraftList] = useState(false)
+
+  // Sync drafts to localStorage
+  useEffect(() => {
+    localStorage.setItem('milkstore_sales_drafts', JSON.stringify(drafts))
+  }, [drafts])
   const navigate = useNavigate()
   const lastProductToastRef = useRef({ code: '', message: '', time: 0 })
+
 
   // Tải danh sách Hàng hóa thực tế từ DB kèm theo cấu trúc giá 3 tầng
   useEffect(() => {
@@ -226,9 +238,9 @@ function SalesDashboard({ t }) {
       }
 
       updated.splice(index + 1, 0, newRow)
-      toast.info('Đã tách thêm 1 dòng quy cách độc lập cho mặt hàng')
       return updated
     })
+    toast.info('Đã tách thêm 1 dòng quy cách độc lập cho mặt hàng')
   }
 
   // Cập nhật số lượng qua nút + / - kèm kiểm tra Validation Tồn kho
@@ -456,14 +468,68 @@ function SalesDashboard({ t }) {
     )
   }
 
-  const handleSaveDraft = (slot = '1') => {
-    const draft = {
-      savedAt: new Date().toISOString(),
-      saleMeta,
-      cartItems,
+  const handleSaveDraft = () => {
+    if (cartItems.length === 0) {
+      toast.warn('Giỏ hàng trống, không thể tạm dừng')
+      return
     }
-    localStorage.setItem(`milkstore_sales_draft_${slot}`, JSON.stringify(draft))
-    toast.success(`Đã lưu tạm đơn vào ô ${slot}`)
+
+    const newDraft = {
+      id: `DRAFT-${Date.now()}`,
+      savedAt: new Date().toISOString(),
+      customerName: saleMeta.customerName || 'Khách lẻ',
+      customerPhone: saleMeta.customerPhone || '',
+      itemCount: cartItems.length,
+      totalAmount: finalTotal,
+      saleMeta: { ...saleMeta },
+      cartItems: [...cartItems],
+    }
+
+    setDrafts((prev) => [newDraft, ...prev])
+    setCartItems([])
+    // Reset meta except staff/warehouse
+    setSaleMeta((prev) => ({
+      ...prev,
+      customerPhone: '',
+      customerName: '',
+      customerAddress: '',
+      invoiceNote: '',
+      discountAmount: '0',
+      discountPercent: '0',
+      oldDebt: '0',
+      orderMode: 'sale'
+    }))
+    toast.success('Đã tạm dừng hóa đơn thành công')
+  }
+
+  const handleResumeDraft = (draft) => {
+    if (cartItems.length > 0) {
+      setModalConfig({
+        isOpen: true,
+        title: 'Cảnh báo ghi đè',
+        message: 'Bạn đang có mặt hàng trong giỏ. Nạp đơn tạm sẽ xóa sạch giỏ hàng hiện tại. Bạn chắc chắn chứ?',
+        onConfirm: () => {
+          setCartItems(draft.cartItems)
+          setSaleMeta(draft.saleMeta)
+          setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
+          setShowDraftList(false)
+          toast.success('Đã nạp lại đơn thành công')
+          setModalConfig((prev) => ({ ...prev, isOpen: false }))
+        }
+      })
+      return
+    }
+
+    setCartItems(draft.cartItems)
+    setSaleMeta(draft.saleMeta)
+    setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
+    setShowDraftList(false)
+    toast.success('Đã nạp lại đơn thành công')
+  }
+
+  const handleDeleteDraft = (draftId) => {
+    setDrafts((prev) => prev.filter((d) => d.id !== draftId))
+    toast.info('Đã xóa đơn tạm')
   }
 
   const handleSaveOrder = () => {
@@ -480,7 +546,11 @@ function SalesDashboard({ t }) {
   }
 
   const handlePreviewInvoice = () => {
-    toast.info(`Xem trước: ${cartItems.length} mặt hàng, tổng thanh toán ${finalTotal.toLocaleString('vi-VN')} đ`)
+    if (cartItems.length === 0) {
+      toast.warn('Chưa có sản phẩm nào trong giỏ để xem trước')
+      return
+    }
+    setIsPreviewOpen(true)
   }
 
   // Gọi API trừ kho và xuất hóa đơn
@@ -501,7 +571,11 @@ function SalesDashboard({ t }) {
       
       if (targetItem) {
         const currentTonKho = Number(targetItem.tonKho) || 0
-        const newTonKho = Math.max(0, currentTonKho - decreaseQty)
+        const isReturn = saleMeta.orderMode === 'return'
+        // Nếu là Trả hàng -> Cộng kho. Nếu là Bán hàng -> Trừ kho.
+        const newTonKho = isReturn 
+          ? currentTonKho + decreaseQty 
+          : Math.max(0, currentTonKho - decreaseQty)
 
         try {
           await updateHangHoa(code, {
@@ -563,7 +637,9 @@ function SalesDashboard({ t }) {
     localStorage.setItem('milkstore_invoices', JSON.stringify([invoiceData, ...currentInvoices]))
 
     // 5. Cập nhật giao diện
-    const successMsg = `Thanh toán thành công đơn hàng ${invoiceId} trị giá ${finalTotal.toLocaleString('vi-VN')} đ!`
+    const isReturn = saleMeta.orderMode === 'return'
+    const actionLabel = isReturn ? 'Nhập trả' : 'Thanh toán'
+    const successMsg = `${actionLabel} thành công đơn hàng ${invoiceId} trị giá ${finalTotal.toLocaleString('vi-VN')} đ!`
     setCheckoutMessage(successMsg)
     toast.success(successMsg)
     setCartItems([])
@@ -571,6 +647,22 @@ function SalesDashboard({ t }) {
     // Tải lại danh sách Hàng hóa để làm mới tồn kho hiển thị
     getHangHoaList().then((res) => setDbProducts(res.data)).catch(() => {})
   }
+
+  // Phím tắt bàn phím (F10 - Xem trước, F12 - Thanh toán)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'F10') {
+        e.preventDefault()
+        handlePreviewInvoice()
+      }
+      if (e.key === 'F12') {
+        e.preventDefault()
+        handleCheckout()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [cartItems, saleMeta, totalPrice, finalTotal])
 
   return (
     <>
@@ -634,10 +726,94 @@ function SalesDashboard({ t }) {
             <input name="salesStaff" value={saleMeta.salesStaff} onChange={handleMetaChange} placeholder="vd: Nhân viên bán hàng" />
           </label>
           <div className="legacy-button-row">
-            <button type="button" onClick={() => handleSaveDraft('1')}>Lưu tạm 1</button>
-            <button type="button" onClick={() => handleSaveDraft('2')}>Lưu tạm 2</button>
-            <button type="button" onClick={() => setSaleMeta((current) => ({ ...current, orderMode: 'gift' }))}>Tặng</button>
-            <button type="button" onClick={() => setSaleMeta((current) => ({ ...current, orderMode: 'return' }))}>Trả hàng</button>
+            <button
+              type="button"
+              className="draft-suspend-btn"
+              onClick={handleSaveDraft}
+              title="Tạm dừng đơn hàng hiện tại để phục vụ khách khác"
+            >
+              ⏸️ Tạm dừng đơn
+            </button>
+            <button
+              type="button"
+              className="draft-list-btn"
+              onClick={() => setShowDraftList(!showDraftList)}
+              style={{ position: 'relative' }}
+            >
+              📂 Đơn chờ ({drafts.length})
+              {drafts.length > 0 && <span className="draft-badge">{drafts.length}</span>}
+            </button>
+            
+            {showDraftList && (
+              <div className="draft-popup-list">
+                <div className="draft-popup-header">
+                  <strong>Danh sách đơn đang chờ ({drafts.length})</strong>
+                  <button onClick={() => setShowDraftList(false)}>×</button>
+                </div>
+                <div className="draft-popup-content">
+                  {drafts.length === 0 ? (
+                    <p style={{ textAlign: 'center', padding: '1rem', color: '#888' }}>Không có đơn chờ nào</p>
+                  ) : (
+                    drafts.map((d) => (
+                      <div key={d.id} className="draft-item-card">
+                        <div className="draft-info">
+                          <strong>{d.customerName}</strong>
+                          <small>{d.customerPhone}</small>
+                          <span className="draft-time">{new Date(d.savedAt).toLocaleTimeString('vi-VN')}</span>
+                        </div>
+                        <div className="draft-stats">
+                          <span>{d.itemCount} món</span>
+                          <strong>{d.totalAmount.toLocaleString('vi-VN')}đ</strong>
+                        </div>
+                        <div className="draft-actions">
+                          <button className="resume-btn" onClick={() => handleResumeDraft(d)}>Nạp lại</button>
+                          <button className="delete-draft-btn" onClick={() => handleDeleteDraft(d.id)}>×</button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = saleMeta.orderMode === 'gift' ? 'sale' : 'gift'
+                setSaleMeta((current) => ({ ...current, orderMode: nextMode }))
+                if (nextMode === 'sale') {
+                  toast.info('Đã quay lại chế độ BÁN HÀNG')
+                } else {
+                  toast.success('Đã chuyển sang chế độ TẶNG HÀNG (Giá 0đ)')
+                }
+              }}
+              style={{ 
+                background: saleMeta.orderMode === 'gift' ? '#f0fdf4' : '', 
+                borderColor: saleMeta.orderMode === 'gift' ? '#86efac' : '',
+                fontWeight: saleMeta.orderMode === 'gift' ? '900' : '600'
+              }}
+            >
+              🎁 Tặng
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = saleMeta.orderMode === 'return' ? 'sale' : 'return'
+                setSaleMeta((current) => ({ ...current, orderMode: nextMode }))
+                if (nextMode === 'sale') {
+                  toast.info('Đã quay lại chế độ BÁN HÀNG')
+                } else {
+                  toast.error('Đã chuyển sang chế độ TRẢ HÀNG (Cộng kho)')
+                }
+              }}
+              style={{ 
+                background: saleMeta.orderMode === 'return' ? '#fef2f2' : '', 
+                borderColor: saleMeta.orderMode === 'return' ? '#fecaca' : '',
+                fontWeight: saleMeta.orderMode === 'return' ? '900' : '600'
+              }}
+            >
+              🔄 Trả hàng
+            </button>
           </div>
 
           <div className="legacy-customer-search">
@@ -706,6 +882,17 @@ function SalesDashboard({ t }) {
               <h2>{t.admin.quickActions[0]}</h2>
               <p>{t.admin.salesDescription}</p>
             </div>
+
+            {saleMeta.orderMode === 'return' && (
+              <div className="order-mode-banner return">
+                <span>⚠️ ĐANG Ở CHẾ ĐỘ TRẢ HÀNG (SẼ CỘNG KHO KHI THANH TOÁN)</span>
+              </div>
+            )}
+            {saleMeta.orderMode === 'gift' && (
+              <div className="order-mode-banner gift">
+                <span>🎁 ĐANG Ở CHẾ ĐỘ TẶNG HÀNG</span>
+              </div>
+            )}
 
             <div style={{ flex: 1, minWidth: '250px' }}>
               <select
@@ -999,6 +1186,20 @@ function SalesDashboard({ t }) {
         message={modalConfig.message}
         onConfirm={modalConfig.onConfirm}
         onCancel={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      <InvoicePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={{
+          saleMeta,
+          cartItems,
+          totalPrice,
+          discountAmount,
+          vatAmount,
+          finalTotal,
+          amountInWords,
+        }}
       />
     </>
   )
