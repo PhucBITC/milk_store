@@ -71,6 +71,8 @@ function SalesDashboard({ t }) {
   const [showDraftList, setShowDraftList] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('')
+  const [currentOrderId, setCurrentOrderId] = useState('')
+  const pollingRef = useRef(null)
 
   // Sync drafts to localStorage
   useEffect(() => {
@@ -556,7 +558,7 @@ function SalesDashboard({ t }) {
   }
 
   // Gọi API trừ kho và xuất hóa đơn
-  const handleCheckout = async () => {
+  const handleCheckout = async (forcedId = null) => {
     if (cartItems.length === 0) return
 
     // 1. Gộp tổng số lượng cơ sở cần trừ theo mã mặt hàng
@@ -607,8 +609,8 @@ function SalesDashboard({ t }) {
     }, 0)
 
     // 4. Tạo đối tượng Hóa đơn lưu vào localStorage
-    const invoiceSnapshot = createInvoiceSnapshot()
-    const invoiceId = invoiceSnapshot.id
+    const invoiceId = forcedId || createInvoiceSnapshot().id
+    const invoiceCreatedAt = new Date().toISOString()
     const finalItems = cartItems.map((item) => {
       const details = getLineDetails(item)
       return {
@@ -622,7 +624,7 @@ function SalesDashboard({ t }) {
 
     const invoiceData = {
       id: invoiceId,
-      createdAt: invoiceSnapshot.createdAt,
+      createdAt: invoiceCreatedAt,
       saleMeta,
       items: finalItems,
       subtotalAmount: totalPrice,
@@ -665,6 +667,33 @@ function SalesDashboard({ t }) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [cartItems, saleMeta, totalPrice, finalTotal])
+
+  // Cơ chế Polling để kiểm tra trạng thái thanh toán tự động
+  useEffect(() => {
+    if (showPaymentModal && paymentMethod === 'qr' && currentOrderId) {
+      pollingRef.current = setInterval(async () => {
+        try {
+          const res = await fetch(`http://localhost:8080/api/payment/check/${currentOrderId}`)
+          const data = await res.json()
+          
+          if (data.status === 'PAID') {
+            clearInterval(pollingRef.current)
+            toast.success('🎉 Hệ thống đã nhận được tiền! Đang xử lý hóa đơn...')
+            // Thực hiện checkout tự động
+            handleCheckout(currentOrderId)
+            setShowPaymentModal(false)
+            setPaymentMethod('')
+          }
+        } catch (error) {
+          console.error('Lỗi khi kiểm tra thanh toán:', error)
+        }
+      }, 2000) // Kiểm tra mỗi 2 giây
+    }
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [showPaymentModal, paymentMethod, currentOrderId])
 
   return (
     <>
@@ -1168,7 +1197,20 @@ function SalesDashboard({ t }) {
               <button
                 type="button"
                 className="pay-action"
-                onClick={() => setShowPaymentModal(true)}
+                onClick={async () => {
+                  if (cartItems.length > 0) {
+                    const newId = `HD${Date.now().toString().slice(-6)}`
+                    setCurrentOrderId(newId)
+                    setShowPaymentModal(true)
+                    
+                    // Thông báo cho backend biết đang có đơn hàng chờ
+                    try {
+                      await fetch(`http://localhost:8080/api/payment/create/${newId}`, { method: 'POST' })
+                    } catch (err) {
+                      console.error('Không thể khởi tạo thanh toán trên server:', err)
+                    }
+                  }
+                }}
                 disabled={cartItems.length === 0}
                 style={{
                   opacity: cartItems.length === 0 ? 0.5 : 1,
@@ -1238,33 +1280,40 @@ function SalesDashboard({ t }) {
             ) : (
               <div className="qr-payment-view">
                 <h3>Quét mã QR để thanh toán</h3>
-                <div className="qr-code-container">
+                <div className="qr-code-container" style={{ textAlign: 'center', margin: '1rem 0' }}>
                   <img 
-                    src={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${finalTotal}&addInfo=Thanh toan don hang&accountName=MILK STORE`} 
+                    src={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${finalTotal}&addInfo=${currentOrderId}&accountName=SIEU THI SUA`} 
                     alt="VietQR Code" 
                     className="qr-image"
+                    style={{ maxWidth: '280px', border: '10px solid #fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   />
                 </div>
-                <div className="qr-info">
-                  <p>Số tiền: <strong>{finalTotal.toLocaleString('vi-VN')} đ</strong></p>
-                  <p>Nội dung: <strong>Thanh toan don hang</strong></p>
+                <div className="qr-info" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                  <p style={{ margin: '0.5rem 0' }}>Số tiền: <strong style={{ color: '#0d9488', fontSize: '1.2rem' }}>{finalTotal.toLocaleString('vi-VN')} đ</strong></p>
+                  <p style={{ margin: '0.5rem 0' }}>Nội dung: <strong style={{ color: '#0369a1' }}>{currentOrderId}</strong></p>
+                  <p style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic', marginTop: '0.5rem' }}>
+                    💡 Hệ thống sẽ tự động xác nhận sau khi bạn chuyển tiền thành công.
+                  </p>
                 </div>
                 <div className="qr-actions">
                   <button 
                     className="btn-back"
-                    onClick={() => setPaymentMethod('')}
+                    onClick={() => {
+                      setPaymentMethod('')
+                      if (pollingRef.current) clearInterval(pollingRef.current)
+                    }}
                   >
                     Quay lại
                   </button>
                   <button 
                     className="btn-confirm"
                     onClick={() => {
-                      handleCheckout();
+                      handleCheckout(currentOrderId);
                       setShowPaymentModal(false);
                       setPaymentMethod('');
                     }}
                   >
-                    Xác nhận đã nhận tiền
+                    Tôi đã chuyển tiền (Xác nhận thủ công)
                   </button>
                 </div>
               </div>
