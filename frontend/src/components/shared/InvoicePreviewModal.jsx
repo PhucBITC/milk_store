@@ -15,7 +15,7 @@ const InvoicePreviewModal = ({ isOpen, onClose, data }) => {
         
         <div className="invoice-container">
           <div className="invoice-header">
-            <h1 className="store-name">MILK STORE</h1>
+            <h1 className="store-name">MẸ XÍU</h1>
             <p className="store-info">Địa chỉ: 55 Đà Nẵng, Ngô Quyền, Hải Phòng</p>
             <p className="store-info">Hotline: 0906.532.999</p>
             <h2 className="invoice-title">HÓA ĐƠN BÁN LẺ</h2>

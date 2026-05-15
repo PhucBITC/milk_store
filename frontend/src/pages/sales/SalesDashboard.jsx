@@ -69,6 +69,8 @@ function SalesDashboard({ t }) {
     return JSON.parse(localStorage.getItem('milkstore_sales_drafts') || '[]')
   })
   const [showDraftList, setShowDraftList] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('')
 
   // Sync drafts to localStorage
   useEffect(() => {
@@ -657,7 +659,7 @@ function SalesDashboard({ t }) {
       }
       if (e.key === 'F12') {
         e.preventDefault()
-        handleCheckout()
+        if (cartItems.length > 0) setShowPaymentModal(true)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -1166,7 +1168,7 @@ function SalesDashboard({ t }) {
               <button
                 type="button"
                 className="pay-action"
-                onClick={handleCheckout}
+                onClick={() => setShowPaymentModal(true)}
                 disabled={cartItems.length === 0}
                 style={{
                   opacity: cartItems.length === 0 ? 0.5 : 1,
@@ -1201,6 +1203,80 @@ function SalesDashboard({ t }) {
           amountInWords,
         }}
       />
+
+      {showPaymentModal && (
+        <div className="payment-modal-overlay">
+          <div className="payment-modal-content">
+            <h2>Chọn phương thức thanh toán</h2>
+            
+            {!paymentMethod ? (
+              <div className="payment-options">
+                <button 
+                  className="payment-option-btn cash"
+                  onClick={() => {
+                    handleCheckout();
+                    setShowPaymentModal(false);
+                  }}
+                >
+                  <span className="payment-icon">💵</span>
+                  <div className="payment-text">
+                    <strong>Tiền mặt</strong>
+                    <small>Thu tiền mặt trực tiếp</small>
+                  </div>
+                </button>
+                <button 
+                  className="payment-option-btn qr"
+                  onClick={() => setPaymentMethod('qr')}
+                >
+                  <span className="payment-icon">📱</span>
+                  <div className="payment-text">
+                    <strong>Mã QR VIETQR</strong>
+                    <small>Quét mã chuyển khoản</small>
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <div className="qr-payment-view">
+                <h3>Quét mã QR để thanh toán</h3>
+                <div className="qr-code-container">
+                  <img 
+                    src={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${finalTotal}&addInfo=Thanh toan don hang&accountName=MILK STORE`} 
+                    alt="VietQR Code" 
+                    className="qr-image"
+                  />
+                </div>
+                <div className="qr-info">
+                  <p>Số tiền: <strong>{finalTotal.toLocaleString('vi-VN')} đ</strong></p>
+                  <p>Nội dung: <strong>Thanh toan don hang</strong></p>
+                </div>
+                <div className="qr-actions">
+                  <button 
+                    className="btn-back"
+                    onClick={() => setPaymentMethod('')}
+                  >
+                    Quay lại
+                  </button>
+                  <button 
+                    className="btn-confirm"
+                    onClick={() => {
+                      handleCheckout();
+                      setShowPaymentModal(false);
+                      setPaymentMethod('');
+                    }}
+                  >
+                    Xác nhận đã nhận tiền
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <button className="payment-modal-close" onClick={() => {
+              setShowPaymentModal(false);
+              setPaymentMethod('');
+            }}>×</button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
