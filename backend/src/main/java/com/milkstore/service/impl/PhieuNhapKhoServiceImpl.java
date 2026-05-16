@@ -61,14 +61,17 @@ public class PhieuNhapKhoServiceImpl implements PhieuNhapKhoService {
             chiTiet.setDonViTinh(item.getDonViTinh());
             chiTietRepository.save(chiTiet);
 
-            // 3.2 Cộng kho + Ghi thẻ kho (truy vết)
-            khoBusinessService.ghiNhanBienDong(
+            // 3.2 Cộng kho + Ghi KhoHangHoaNhap + TheKho (truy vết hoàn hảo)
+            khoBusinessService.ghiNhapKho(
                 item.getMaHangHoa(),
                 request.getMaKho(),
-                item.getSoLuong(),          // Số dương = NHẬP vào
-                "NHAP",
+                item.getSoLuong(),
                 maPhieu,
-                "Nhập kho từ NCC: " + (request.getMaNhaCungCap() != null ? request.getMaNhaCungCap() : "Không có NCC")
+                request.getMaNhaCungCap(),
+                item.getDonGia(),
+                item.getDonViTinh(),
+                request.getMaNhanVien(),
+                request.getGhiChu()
             );
 
             // 3.3 Cập nhật giá vốn mới nhất vào TB_HANGHOA nếu có donGia

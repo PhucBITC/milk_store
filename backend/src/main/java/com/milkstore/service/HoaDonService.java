@@ -64,15 +64,17 @@ public class HoaDonService {
             chiTiet.setDvt(itemDTO.getDvt());
             hoaDonChiTietRepository.save(chiTiet);
 
-            // 3.2 TRỪ KHO VÀ GHI THẺ KHO (Dùng Service chung để truy vết hoàn hảo)
-            BigDecimal soLuongXuat = new BigDecimal(itemDTO.getSoLuong()).negate(); // Xuất nên là số âm
-            khoBusinessService.ghiNhanBienDong(
-                itemDTO.getMaHang(), 
-                request.getMaChiNhanh(), 
-                soLuongXuat, 
-                "XUAT", 
-                maHoaDon, 
-                "Bán hàng cho KH: " + (request.getMaKhachHang() != null ? request.getMaKhachHang() : "Khách lẻ")
+            // 3.2 XUẤT KHO: ghi vào KhoBanHang + TheKho (truy vết hoàn hảo)
+            khoBusinessService.ghiXuatKho(
+                itemDTO.getMaHang(),
+                request.getMaChiNhanh(),
+                new BigDecimal(itemDTO.getSoLuong()),
+                maHoaDon,
+                request.getMaKhachHang(),
+                request.getNhanVienBan(),
+                itemDTO.getDonGia(),
+                itemDTO.getDvt(),
+                request.getHinhThucThanhToan()
             );
         }
 
