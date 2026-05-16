@@ -31,7 +31,7 @@ public class HoaDonService {
     private HangHoaRepository hangHoaRepository;
 
     @Autowired
-    private TonKhoRepository tonKhoRepository;
+    private KhoBusinessService khoBusinessService;
 
     @Transactional
     public HoaDon checkout(CheckoutRequest request) {
@@ -52,9 +52,9 @@ public class HoaDonService {
 
         HoaDon savedHoaDon = hoaDonRepository.save(hoadon);
 
-        // 3. Lưu Chi tiết hóa đơn và Trừ kho
+        // 3. Lưu Chi tiết hóa đơn và Trừ kho (CÓ TRUY VẾT)
         for (CheckoutRequest.CartItemDTO itemDTO : request.getItems()) {
-            // Lưu chi tiết
+            // 3.1 Lưu chi tiết hóa đơn
             HoaDonChiTiet chiTiet = new HoaDonChiTiet();
             chiTiet.setMaHoaDon(maHoaDon);
             chiTiet.setMaHang(itemDTO.getMaHang());
@@ -64,30 +64,16 @@ public class HoaDonService {
             chiTiet.setDvt(itemDTO.getDvt());
             hoaDonChiTietRepository.save(chiTiet);
 
-            // 3.1 Trừ kho tổng (TB_HANGHOA)
-            HangHoa hangHoa = hangHoaRepository.findById(itemDTO.getMaHang())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy mặt hàng: " + itemDTO.getMaHang()));
-            
-            int currentStock = hangHoa.getTonKho() != null ? hangHoa.getTonKho() : 0;
-            hangHoa.setTonKho(currentStock - itemDTO.getSoLuong());
-            hangHoaRepository.save(hangHoa);
-
-            // 3.2 Trừ kho chi tiết (TB_TONKHO_KHO) theo MACHINHANH
-            Optional<TonKho> tonKhoOpt = tonKhoRepository.findByMaHangHoaAndMaKho(itemDTO.getMaHang(), request.getMaChiNhanh());
-            if (tonKhoOpt.isPresent()) {
-                TonKho tk = tonKhoOpt.get();
-                BigDecimal currentQty = tk.getSoLuongTong() != null ? tk.getSoLuongTong() : BigDecimal.ZERO;
-                tk.setSoLuongTong(currentQty.subtract(new BigDecimal(itemDTO.getSoLuong())));
-                tonKhoRepository.save(tk);
-            } else {
-                // Nếu chưa có dòng tồn kho ở kho này, có thể tạo mới với số âm hoặc bỏ qua tùy nghiệp vụ
-                TonKho newTk = new TonKho();
-                newTk.setMaHangHoa(itemDTO.getMaHang());
-                newTk.setMaKho(request.getMaChiNhanh());
-                newTk.setSoLuongTong(new BigDecimal(-itemDTO.getSoLuong()));
-                newTk.setDonGia(BigDecimal.ZERO);
-                tonKhoRepository.save(newTk);
-            }
+            // 3.2 TRỪ KHO VÀ GHI THẺ KHO (Dùng Service chung để truy vết hoàn hảo)
+            BigDecimal soLuongXuat = new BigDecimal(itemDTO.getSoLuong()).negate(); // Xuất nên là số âm
+            khoBusinessService.ghiNhanBienDong(
+                itemDTO.getMaHang(), 
+                request.getMaChiNhanh(), 
+                soLuongXuat, 
+                "XUAT", 
+                maHoaDon, 
+                "Bán hàng cho KH: " + (request.getMaKhachHang() != null ? request.getMaKhachHang() : "Khách lẻ")
+            );
         }
 
         return savedHoaDon;

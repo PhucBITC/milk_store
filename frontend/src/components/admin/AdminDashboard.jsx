@@ -8,6 +8,7 @@ import NhaCungCapPage from '../../pages/nha-cung-cap/NhaCungCapPage'
 import SalesDashboard from '../../pages/sales/SalesDashboard'
 import InvoicesPage from '../../pages/invoices/InvoicesPage'
 import WarehouseManagement from '../../pages/warehouse/WarehouseManagement'
+import NhapKhoPage from '../../pages/nhap-kho/NhapKhoPage'
 import PlaceholderPage from '../../pages/placeholder/PlaceholderPage'
 import BrandLogo from '../shared/BrandLogo'
 import AdminTopbar from './layout/AdminTopbar'
@@ -98,6 +99,7 @@ function AdminDashboard({
           <Route path="/hang-hoa" element={<HangHoaPage t={t.hangHoa} />} />
           <Route path="/products" element={<SalesDashboard t={t} />} />
           <Route path="/inventory" element={<WarehouseManagement />} />
+          <Route path="/nhap-kho" element={<NhapKhoPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/debts" element={<PlaceholderPage title="Công nợ" />} />
           <Route path="/cash" element={<PlaceholderPage title="Thu chi" />} />
