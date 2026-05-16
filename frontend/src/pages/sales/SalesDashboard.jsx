@@ -73,6 +73,7 @@ function SalesDashboard({ t }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('')
   const [currentOrderId, setCurrentOrderId] = useState('')
+  const [warehouses, setWarehouses] = useState([])
   const pollingRef = useRef(null)
 
   // Sync drafts to localStorage
@@ -86,16 +87,24 @@ function SalesDashboard({ t }) {
   // Tải danh sách Hàng hóa thực tế từ DB kèm theo cấu trúc giá 3 tầng
   useEffect(() => {
     let isMounted = true
-    getHangHoaList()
-      .then((res) => {
+    getHangHoaList().then((res) => { if (isMounted) setDbProducts(res.data) }).catch(() => {})
+    
+    // Tải danh sách kho mà nhân viên được phép truy cập
+    const user = JSON.parse(localStorage.getItem('userAccount') || '{}')
+    const username = user.username || 'admin' // Mặc định là admin nếu chưa có login
+    fetch(`http://localhost:8080/api/kho/user/${username}`)
+      .then(res => res.json())
+      .then(data => {
         if (isMounted) {
-          setDbProducts(res.data)
+          setWarehouses(data)
+          if (data.length > 0) {
+            setSaleMeta(prev => ({ ...prev, warehouse: data[0].tenKho, maKho: data[0].maKho }))
+          }
         }
       })
       .catch(() => {})
-    return () => {
-      isMounted = false
-    }
+
+    return () => { isMounted = false }
   }, [])
 
   useEffect(() => {
@@ -565,7 +574,7 @@ function SalesDashboard({ t }) {
     try {
       // 1. Chuẩn bị gói dữ liệu gửi lên Server (DTO)
       const checkoutData = {
-        maChiNhanh: saleMeta.warehouse || 'CN01', // Giả sử warehouse là mã chi nhánh
+        maChiNhanh: saleMeta.maKho || '01', // Sử dụng mã kho thực tế
         maKhachHang: saleMeta.customerPhone || 'KHACH_LE',
         sdtKhachHang: saleMeta.customerPhone,
         nhanVienBan: saleMeta.salesStaff || 'Nhan vien ban hang',
@@ -713,11 +722,20 @@ function SalesDashboard({ t }) {
       <section className="legacy-sale-panel" aria-label="Thông tin bán hàng">
         <div className="legacy-sale-grid">
           <label>
-            Kho
-            <select name="warehouse" value={saleMeta.warehouse} onChange={handleMetaChange}>
-              <option value="Kho Tổng">Kho Tổng</option>
-              <option value="Kho A">Kho A</option>
-              <option value="Kho B">Kho B</option>
+            Kho xuất hàng
+            <select 
+              name="warehouse" 
+              value={saleMeta.warehouse} 
+              onChange={(e) => {
+                const selected = warehouses.find(w => w.tenKho === e.target.value);
+                setSaleMeta(prev => ({ ...prev, warehouse: e.target.value, maKho: selected?.maKho }));
+              }}
+              style={{ fontWeight: 'bold', color: 'var(--success-action)' }}
+            >
+              {warehouses.map(w => (
+                <option key={w.maKho} value={w.tenKho}>{w.tenKho}</option>
+              ))}
+              {warehouses.length === 0 && <option value="Kho Tổng">Kho Tổng (Mặc định)</option>}
             </select>
           </label>
           <label>
@@ -731,7 +749,7 @@ function SalesDashboard({ t }) {
               onClick={handleSaveDraft}
               title="Tạm dừng đơn hàng hiện tại để phục vụ khách khác"
             >
-              ⏸️ Tạm dừng đơn
+              Tạm dừng đơn
             </button>
             <button
               type="button"
@@ -739,7 +757,7 @@ function SalesDashboard({ t }) {
               onClick={() => setShowDraftList(!showDraftList)}
               style={{ position: 'relative' }}
             >
-              📂 Đơn chờ ({drafts.length})
+              Đơn chờ ({drafts.length})
               {drafts.length > 0 && <span className="draft-badge">{drafts.length}</span>}
             </button>
             
@@ -792,7 +810,7 @@ function SalesDashboard({ t }) {
                 fontWeight: saleMeta.orderMode === 'gift' ? '900' : '600'
               }}
             >
-              🎁 Tặng
+              Chế độ Tặng
             </button>
             <button
               type="button"
@@ -907,7 +925,7 @@ function SalesDashboard({ t }) {
                   fontWeight: 'bold',
                 }}
               >
-                <option value="">🔍 Chọn sản phẩm thêm vào hóa đơn...</option>
+                <option value="">Chọn sản phẩm thêm vào hóa đơn...</option>
                 {availableOptions.map((opt) => {
                   const currentDbItem = dbProducts.find((p) => p.maHang === opt.code)
                   const tonKhoText = currentDbItem ? `Tồn: ${currentDbItem.tonKho}` : ''
@@ -1234,7 +1252,6 @@ function SalesDashboard({ t }) {
                     setShowPaymentModal(false);
                   }}
                 >
-                  <span className="payment-icon">💵</span>
                   <div className="payment-text">
                     <strong>Tiền mặt</strong>
                     <small>Thu tiền mặt trực tiếp</small>
@@ -1244,7 +1261,6 @@ function SalesDashboard({ t }) {
                   className="payment-option-btn qr"
                   onClick={() => setPaymentMethod('qr')}
                 >
-                  <span className="payment-icon">📱</span>
                   <div className="payment-text">
                     <strong>Mã QR VIETQR</strong>
                     <small>Quét mã chuyển khoản</small>

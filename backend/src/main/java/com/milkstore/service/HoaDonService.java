@@ -4,12 +4,15 @@ import com.milkstore.dto.CheckoutRequest;
 import com.milkstore.entity.HangHoa;
 import com.milkstore.entity.HoaDon;
 import com.milkstore.entity.HoaDonChiTiet;
+import com.milkstore.entity.TonKho;
 import com.milkstore.repository.HangHoaRepository;
 import com.milkstore.repository.HoaDonChiTietRepository;
 import com.milkstore.repository.HoaDonRepository;
+import com.milkstore.repository.TonKhoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,6 +29,9 @@ public class HoaDonService {
 
     @Autowired
     private HangHoaRepository hangHoaRepository;
+
+    @Autowired
+    private TonKhoRepository tonKhoRepository;
 
     @Transactional
     public HoaDon checkout(CheckoutRequest request) {
@@ -58,13 +64,30 @@ public class HoaDonService {
             chiTiet.setDvt(itemDTO.getDvt());
             hoaDonChiTietRepository.save(chiTiet);
 
-            // Trừ kho (Trừ số lượng thực tế từ TB_HANGHOA)
+            // 3.1 Trừ kho tổng (TB_HANGHOA)
             HangHoa hangHoa = hangHoaRepository.findById(itemDTO.getMaHang())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy mặt hàng: " + itemDTO.getMaHang()));
             
             int currentStock = hangHoa.getTonKho() != null ? hangHoa.getTonKho() : 0;
             hangHoa.setTonKho(currentStock - itemDTO.getSoLuong());
             hangHoaRepository.save(hangHoa);
+
+            // 3.2 Trừ kho chi tiết (TB_TONKHO_KHO) theo MACHINHANH
+            Optional<TonKho> tonKhoOpt = tonKhoRepository.findByMaHangHoaAndMaKho(itemDTO.getMaHang(), request.getMaChiNhanh());
+            if (tonKhoOpt.isPresent()) {
+                TonKho tk = tonKhoOpt.get();
+                BigDecimal currentQty = tk.getSoLuongTong() != null ? tk.getSoLuongTong() : BigDecimal.ZERO;
+                tk.setSoLuongTong(currentQty.subtract(new BigDecimal(itemDTO.getSoLuong())));
+                tonKhoRepository.save(tk);
+            } else {
+                // Nếu chưa có dòng tồn kho ở kho này, có thể tạo mới với số âm hoặc bỏ qua tùy nghiệp vụ
+                TonKho newTk = new TonKho();
+                newTk.setMaHangHoa(itemDTO.getMaHang());
+                newTk.setMaKho(request.getMaChiNhanh());
+                newTk.setSoLuongTong(new BigDecimal(-itemDTO.getSoLuong()));
+                newTk.setDonGia(BigDecimal.ZERO);
+                tonKhoRepository.save(newTk);
+            }
         }
 
         return savedHoaDon;
