@@ -54,6 +54,7 @@ function SalesDashboard({ t }) {
     invoiceNote: '',
     orderMode: 'sale',
     noPrint: false,
+    isVat: false,
     discountAmount: '0',
     discountPercent: '0',
     oldDebt: '0',
@@ -386,7 +387,7 @@ function SalesDashboard({ t }) {
   const discountAmount = parseCurrencyNumber(saleMeta.discountAmount)
   const discountPercent = clampNumber(Number(saleMeta.discountPercent) || 0, 0, 100)
   const oldDebtAmount = parseCurrencyNumber(saleMeta.oldDebt)
-  const vatAmount = 0
+  const vatAmount = saleMeta.isVat ? Math.round(totalPrice * 0.1) : 0
   const finalTotal = Math.max(0, totalPrice - discountAmount - Math.round(totalPrice * discountPercent / 100) + vatAmount)
   const amountInWords = numberToVietnamese(finalTotal)
   const cleanCustomerPhone = saleMeta.customerPhone.trim()
@@ -557,99 +558,66 @@ function SalesDashboard({ t }) {
     setIsPreviewOpen(true)
   }
 
-  // Gọi API trừ kho và xuất hóa đơn
+  // Gọi API lưu hóa đơn vào Database và trừ kho
   const handleCheckout = async (forcedId = null) => {
     if (cartItems.length === 0) return
 
-    // 1. Gộp tổng số lượng cơ sở cần trừ theo mã mặt hàng
-    const qtyDecreasedByCode = {}
-    cartItems.forEach((item) => {
-      const { totalBaseQtyDecreased } = getLineDetails(item)
-      qtyDecreasedByCode[item.code] = (qtyDecreasedByCode[item.code] || 0) + totalBaseQtyDecreased
-    })
+    try {
+      // 1. Chuẩn bị gói dữ liệu gửi lên Server (DTO)
+      const checkoutData = {
+        maChiNhanh: saleMeta.warehouse || 'CN01', // Giả sử warehouse là mã chi nhánh
+        maKhachHang: saleMeta.customerPhone || 'KHACH_LE',
+        sdtKhachHang: saleMeta.customerPhone,
+        nhanVienBan: saleMeta.salesStaff || 'Nhan vien ban hang',
+        hinhThucThanhToan: paymentMethod === 'qr' ? 'CK' : 'TM',
+        xuatVat: saleMeta.isVat ? 'DA_XUAT_VAT' : 'CHUA_XUAT_VAT',
+        tongTien: finalTotal,
+        giamGia: parseCurrencyNumber(saleMeta.discountAmount) + (totalPrice * clampNumber(Number(saleMeta.discountPercent) || 0, 0, 100) / 100),
+        items: cartItems.map(item => {
+          const details = getLineDetails(item);
+          return {
+            maHang: item.code,
+            soLuong: details.totalBaseQtyDecreased,
+            donGia: details.appliedPrice,
+            thanhTien: details.appliedPrice * (Number(item.quantity) || 0),
+            dvt: details.unitLabel
+          };
+        })
+      };
 
-    // 2. Thực hiện gọi API updateHangHoa cập nhật lại Tồn kho thực tế
-    for (const code of Object.keys(qtyDecreasedByCode)) {
-      const decreaseQty = qtyDecreasedByCode[code]
-      const targetItem = dbProducts.find((p) => p.maHang === code)
+      // 2. Gọi API Checkout
+      const response = await fetch('http://localhost:8080/api/hoadon/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(checkoutData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Không thể lưu hóa đơn vào Database');
+      }
+
+      const savedInvoice = await response.json();
+      const invoiceId = savedInvoice.maHoaDon;
+
+      // 3. Thông báo thành công
+      const isReturn = saleMeta.orderMode === 'return';
+      const actionLabel = isReturn ? 'Nhập trả' : 'Thanh toán';
+      const successMsg = `${actionLabel} thành công! Đơn hàng ${invoiceId} đã được lưu vào Database.`;
       
-      if (targetItem) {
-        const currentTonKho = Number(targetItem.tonKho) || 0
-        const isReturn = saleMeta.orderMode === 'return'
-        // Nếu là Trả hàng -> Cộng kho. Nếu là Bán hàng -> Trừ kho.
-        const newTonKho = isReturn 
-          ? currentTonKho + decreaseQty 
-          : Math.max(0, currentTonKho - decreaseQty)
+      setCheckoutMessage(successMsg);
+      toast.success(successMsg);
+      setCartItems([]);
 
-        try {
-          await updateHangHoa(code, {
-            tenHang: targetItem.tenHang,
-            maNhomHang: targetItem.maNhomHang || targetItem.nhomHang?.maNhomHang || '',
-            maDvt: targetItem.maDvt || targetItem.unitConversion?.maDvt || '',
-            giaBan1: targetItem.giaBan1,
-            giaBan2: targetItem.giaBan2,
-            giaBan3: targetItem.giaBan3,
-            giaNhap: targetItem.giaNhap,
-            tonKho: newTonKho,
-            hienThi: targetItem.hienThi ?? true,
-            ghiChu: targetItem.ghiChu || '',
-          })
-        } catch {
-          // Vẫn tiếp tục xử lý các mặt hàng khác nếu 1 mã bị lỗi
-        }
-      }
+      // Tải lại danh sách Hàng hóa để cập nhật tồn kho mới từ Server
+      getHangHoaList().then((res) => setDbProducts(res.data)).catch(() => {});
+
+    } catch (error) {
+      console.error('Lỗi thanh toán:', error);
+      toast.error('Lỗi thanh toán: ' + error.message);
     }
-
-    // 3. Tính toán chi phí vốn và lợi nhuận gộp cho hóa đơn
-    const totalCost = cartItems.reduce((acc, item) => {
-      const targetItem = dbProducts.find((p) => p.maHang === item.code)
-      const costPrice = targetItem ? Number(targetItem.giaNhap) || 0 : 0
-      const { totalBaseQtyDecreased } = getLineDetails(item)
-      return acc + costPrice * totalBaseQtyDecreased
-    }, 0)
-
-    // 4. Tạo đối tượng Hóa đơn lưu vào localStorage
-    const invoiceId = forcedId || createInvoiceSnapshot().id
-    const invoiceCreatedAt = new Date().toISOString()
-    const finalItems = cartItems.map((item) => {
-      const details = getLineDetails(item)
-      return {
-        ...item,
-        appliedPrice: details.appliedPrice,
-        totalBaseQtyDecreased: details.totalBaseQtyDecreased,
-        unitLabel: details.unitLabel,
-        safeQuantity: Number(item.quantity) || 0,
-      }
-    })
-
-    const invoiceData = {
-      id: invoiceId,
-      createdAt: invoiceCreatedAt,
-      saleMeta,
-      items: finalItems,
-      subtotalAmount: totalPrice,
-      discountAmount,
-      discountPercent,
-      vatAmount,
-      oldDebtAmount,
-      totalAmount: finalTotal,
-      totalCost: totalCost,
-      grossProfit: finalTotal - totalCost,
-    }
-
-    const currentInvoices = JSON.parse(localStorage.getItem('milkstore_invoices') || '[]')
-    localStorage.setItem('milkstore_invoices', JSON.stringify([invoiceData, ...currentInvoices]))
-
-    // 5. Cập nhật giao diện
-    const isReturn = saleMeta.orderMode === 'return'
-    const actionLabel = isReturn ? 'Nhập trả' : 'Thanh toán'
-    const successMsg = `${actionLabel} thành công đơn hàng ${invoiceId} trị giá ${finalTotal.toLocaleString('vi-VN')} đ!`
-    setCheckoutMessage(successMsg)
-    toast.success(successMsg)
-    setCartItems([])
-
-    // Tải lại danh sách Hàng hóa để làm mới tồn kho hiển thị
-    getHangHoaList().then((res) => setDbProducts(res.data)).catch(() => {})
   }
 
   // Phím tắt bàn phím (F10 - Xem trước, F12 - Thanh toán)
@@ -1135,10 +1103,16 @@ function SalesDashboard({ t }) {
               <span>{t.admin.payment}</span>
               <strong>{finalTotal.toLocaleString('vi-VN')} đ</strong>
             </div>
-            <label className="admin-checkbox">
-              <input name="noPrint" type="checkbox" checked={saleMeta.noPrint} onChange={handleMetaChange} />
-              {t.admin.noPrint}
-            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <label className="admin-checkbox">
+                <input name="noPrint" type="checkbox" checked={saleMeta.noPrint} onChange={handleMetaChange} />
+                {t.admin.noPrint}
+              </label>
+              <label className="admin-checkbox" style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                <input name="isVat" type="checkbox" checked={saleMeta.isVat} onChange={handleMetaChange} />
+                🔴 Xuất hóa đơn VAT (10%)
+              </label>
+            </div>
           </div>
 
           <div className="payment-controls-card">
@@ -1155,7 +1129,7 @@ function SalesDashboard({ t }) {
 
             <div className="payment-summary">
               <span>Tạm tính</span><strong>{totalPrice.toLocaleString('vi-VN')} đ</strong>
-              <span>VAT</span><strong>{vatAmount.toLocaleString('vi-VN')} đ</strong>
+              <span>VAT {saleMeta.isVat ? '(10%)' : ''}</span><strong style={{ color: saleMeta.isVat ? '#dc2626' : 'inherit' }}>{vatAmount.toLocaleString('vi-VN')} đ</strong>
               <span>Nợ cũ</span><input name="oldDebt" value={saleMeta.oldDebt} onChange={handleMetaChange} inputMode="numeric" />
               <span>Tiền TT</span><strong>{finalTotal.toLocaleString('vi-VN')} đ</strong>
             </div>
