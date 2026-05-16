@@ -70,6 +70,14 @@ public class HoaDonService {
         return savedHoaDon;
     }
 
+    public java.util.List<HoaDon> getAllInvoices() {
+        return hoaDonRepository.findAllByOrderByNgayGioTaoDesc();
+    }
+
+    public java.util.List<HoaDonChiTiet> getInvoiceDetails(String maHoaDon) {
+        return hoaDonChiTietRepository.findByMaHoaDon(maHoaDon);
+    }
+
     private String generateMaHoaDon(String maChiNhanh) {
         String todayStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("ddMMyyyy"));
         String prefix = maChiNhanh + todayStr;

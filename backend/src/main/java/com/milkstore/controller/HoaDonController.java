@@ -24,4 +24,16 @@ public class HoaDonController {
             return ResponseEntity.badRequest().body("Lỗi khi xử lý hóa đơn: " + e.getMessage());
         }
     }
+
+    // Lấy danh sách tất cả hóa đơn
+    @GetMapping
+    public ResponseEntity<?> getAllInvoices() {
+        return ResponseEntity.ok(hoaDonService.getAllInvoices());
+    }
+
+    // Lấy chi tiết của một hóa đơn
+    @GetMapping("/{id}/details")
+    public ResponseEntity<?> getInvoiceDetails(@PathVariable String id) {
+        return ResponseEntity.ok(hoaDonService.getInvoiceDetails(id));
+    }
 }
