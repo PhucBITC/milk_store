@@ -6,9 +6,9 @@ import java.util.List;
 
 public interface HangHoaService {
 
-    List<HangHoaResponse> getAll();
+    List<HangHoaResponse> getAll(String maKho);
 
-    List<HangHoaResponse> search(String keyword);
+    List<HangHoaResponse> search(String keyword, String maKho);
 
     HangHoaResponse getByMaHang(String maHang);
 

@@ -87,18 +87,22 @@ function SalesDashboard({ t }) {
   // Tải danh sách Hàng hóa thực tế từ DB kèm theo cấu trúc giá 3 tầng
   useEffect(() => {
     let isMounted = true
-    getHangHoaList().then((res) => { if (isMounted) setDbProducts(res.data) }).catch(() => {})
     
     // Tải danh sách kho mà nhân viên được phép truy cập
-    const user = JSON.parse(localStorage.getItem('userAccount') || '{}')
-    const username = user.username || 'admin' // Mặc định là admin nếu chưa có login
+    const savedUser = sessionStorage.getItem('milkstore-current-user')
+    const user = savedUser ? JSON.parse(savedUser) : null
+    const username = user?.maTaiKhoan || 'admin'
+
     fetch(`http://localhost:8080/api/kho/user/${username}`)
       .then(res => res.json())
       .then(data => {
         if (isMounted) {
-          setWarehouses(data)
-          if (data.length > 0) {
-            setSaleMeta(prev => ({ ...prev, warehouse: data[0].tenKho, maKho: data[0].maKho }))
+          if (Array.isArray(data)) {
+            setWarehouses(data)
+            if (data.length > 0) {
+              // Ưu tiên chọn kho đầu tiên được phân quyền
+              setSaleMeta(prev => ({ ...prev, warehouse: data[0].tenKho, maKho: data[0].maKho }))
+            }
           }
         }
       })
@@ -106,6 +110,20 @@ function SalesDashboard({ t }) {
 
     return () => { isMounted = false }
   }, [])
+
+  // Tự động tải lại hàng hóa khi thay đổi kho để xem tồn kho đúng ý
+  useEffect(() => {
+    let isMounted = true
+    getHangHoaList(saleMeta.maKho)
+      .then((res) => {
+        if (isMounted) {
+          setDbProducts(res.data)
+        }
+      })
+      .catch(() => {})
+    
+    return () => { isMounted = false }
+  }, [saleMeta.maKho])
 
   useEffect(() => {
     let isMounted = true

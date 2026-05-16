@@ -1,4 +1,4 @@
-﻿import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import NhomChuPage from '../../pages/nhom-chu/NhomChuPage'
 import NhomHangPage from '../../pages/nhom-hang/NhomHangPage'
 import HangHoaPage from '../../pages/hang-hoa/HangHoaPage'
@@ -7,6 +7,7 @@ import KhachHangPage from '../../pages/khach-hang/KhachHangPage'
 import NhaCungCapPage from '../../pages/nha-cung-cap/NhaCungCapPage'
 import SalesDashboard from '../../pages/sales/SalesDashboard'
 import InvoicesPage from '../../pages/invoices/InvoicesPage'
+import WarehouseManagement from '../../pages/warehouse/WarehouseManagement'
 import PlaceholderPage from '../../pages/placeholder/PlaceholderPage'
 import BrandLogo from '../shared/BrandLogo'
 import AdminTopbar from './layout/AdminTopbar'
@@ -96,7 +97,7 @@ function AdminDashboard({
           <Route path="/nhom-hang" element={<NhomHangPage t={t.nhomHang} />} />
           <Route path="/hang-hoa" element={<HangHoaPage t={t.hangHoa} />} />
           <Route path="/products" element={<SalesDashboard t={t} />} />
-          <Route path="/inventory" element={<PlaceholderPage title="Kho hàng" />} />
+          <Route path="/inventory" element={<WarehouseManagement />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/debts" element={<PlaceholderPage title="Công nợ" />} />
           <Route path="/cash" element={<PlaceholderPage title="Thu chi" />} />

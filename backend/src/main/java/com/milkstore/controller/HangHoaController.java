@@ -30,13 +30,16 @@ public class HangHoaController {
     }
 
     @GetMapping
-    public List<HangHoaResponse> getAll() {
-        return hangHoaService.getAll();
+    public List<HangHoaResponse> getAll(@RequestParam(required = false) String maKho) {
+        return hangHoaService.getAll(maKho);
     }
 
     @GetMapping("/search")
-    public List<HangHoaResponse> search(@RequestParam(defaultValue = "") String keyword) {
-        return hangHoaService.search(keyword);
+    public List<HangHoaResponse> search(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(required = false) String maKho
+    ) {
+        return hangHoaService.search(keyword, maKho);
     }
 
     @GetMapping("/{maHang}")

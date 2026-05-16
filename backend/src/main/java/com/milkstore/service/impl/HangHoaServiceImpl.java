@@ -5,15 +5,18 @@ import com.milkstore.dto.response.HangHoaResponse;
 import com.milkstore.entity.HangHoa;
 import com.milkstore.entity.NhomHang;
 import com.milkstore.entity.UnitConversion;
+import com.milkstore.entity.TonKho;
 import com.milkstore.exception.ResourceNotFoundException;
 import com.milkstore.repository.HangHoaRepository;
 import com.milkstore.repository.NhomHangRepository;
+import com.milkstore.repository.TonKhoRepository;
 import com.milkstore.repository.UnitConversionRepository;
 import com.milkstore.service.HangHoaService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -29,44 +32,47 @@ public class HangHoaServiceImpl implements HangHoaService {
     private final HangHoaRepository hangHoaRepository;
     private final NhomHangRepository nhomHangRepository;
     private final UnitConversionRepository unitConversionRepository;
+    private final TonKhoRepository tonKhoRepository;
 
     public HangHoaServiceImpl(
             HangHoaRepository hangHoaRepository,
             NhomHangRepository nhomHangRepository,
-            UnitConversionRepository unitConversionRepository
+            UnitConversionRepository unitConversionRepository,
+            TonKhoRepository tonKhoRepository
     ) {
         this.hangHoaRepository = hangHoaRepository;
         this.nhomHangRepository = nhomHangRepository;
         this.unitConversionRepository = unitConversionRepository;
+        this.tonKhoRepository = tonKhoRepository;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<HangHoaResponse> getAll() {
+    public List<HangHoaResponse> getAll(String maKho) {
         return hangHoaRepository.findAll(NEWEST_FIRST).stream()
-                .map(this::toResponse)
+                .map(hh -> this.toResponse(hh, maKho))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<HangHoaResponse> search(String keyword) {
+    public List<HangHoaResponse> search(String keyword, String maKho) {
         String cleanKeyword = keyword == null ? "" : keyword.trim();
         if (cleanKeyword.isEmpty()) {
-            return getAll();
+            return getAll(maKho);
         }
 
         return hangHoaRepository
                 .findByMaHangContainingIgnoreCaseOrTenHangContainingIgnoreCase(cleanKeyword, cleanKeyword, NEWEST_FIRST)
                 .stream()
-                .map(this::toResponse)
+                .map(hh -> this.toResponse(hh, maKho))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public HangHoaResponse getByMaHang(String maHang) {
-        return toResponse(findByMaHang(maHang));
+        return toResponse(findByMaHang(maHang), null);
     }
 
     @Override
@@ -103,7 +109,7 @@ public class HangHoaServiceImpl implements HangHoaService {
         hangHoa.setGhiChu(cleanOptionalText(request.getGhiChu()));
         hangHoa.setNgayTao(now);
 
-        return toResponse(hangHoaRepository.save(hangHoa));
+        return toResponse(hangHoaRepository.save(hangHoa), null);
     }
 
     @Override
@@ -136,7 +142,7 @@ public class HangHoaServiceImpl implements HangHoaService {
         }
         hangHoa.setGhiChu(cleanOptionalText(request.getGhiChu()));
 
-        return toResponse(hangHoaRepository.save(hangHoa));
+        return toResponse(hangHoaRepository.save(hangHoa), null);
     }
 
     @Override
@@ -178,14 +184,26 @@ public class HangHoaServiceImpl implements HangHoaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Unit conversion not found with MADVT: " + cleanMaDvt));
     }
 
-    private HangHoaResponse toResponse(HangHoa hangHoa) {
+    private HangHoaResponse toResponse(HangHoa hangHoa, String maKho) {
         HangHoaResponse response = new HangHoaResponse();
         response.setMaHang(hangHoa.getMaHang());
         response.setTenHang(hangHoa.getTenHang());
 
         // Giá nhập, tồn kho, trạng thái
         response.setGiaNhap(hangHoa.getGiaNhap());
-        response.setTonKho(hangHoa.getTonKho());
+        
+        // LOGIC TRỪ KHO ĐÚNG Ý: Nếu có maKho, ưu tiên lấy tồn kho của kho đó
+        Integer displayedStock = hangHoa.getTonKho();
+        if (maKho != null && !maKho.isEmpty()) {
+            Optional<TonKho> tonKhoOpt = tonKhoRepository.findByMaHangHoaAndMaKho(hangHoa.getMaHang(), maKho);
+            if (tonKhoOpt.isPresent()) {
+                displayedStock = tonKhoOpt.get().getSoLuongTong().intValue();
+            } else {
+                displayedStock = 0; // Nếu kho này chưa từng nhập hàng này thì tồn là 0
+            }
+        }
+        
+        response.setTonKho(displayedStock);
         response.setHienThi(hangHoa.getHienThi());
         response.setGhiChu(hangHoa.getGhiChu());
         response.setNgayTao(hangHoa.getNgayTao());

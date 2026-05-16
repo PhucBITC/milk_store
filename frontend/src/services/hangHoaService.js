@@ -2,13 +2,15 @@ import axios from 'axios'
 
 const API_URL = 'http://localhost:8080/api/hang-hoa'
 
-export function getHangHoaList() {
-  return axios.get(API_URL)
+export function getHangHoaList(maKho) {
+  return axios.get(API_URL, {
+    params: { maKho }
+  })
 }
 
-export function searchHangHoa(keyword) {
+export function searchHangHoa(keyword, maKho) {
   return axios.get(`${API_URL}/search`, {
-    params: { keyword },
+    params: { keyword, maKho },
   })
 }
 

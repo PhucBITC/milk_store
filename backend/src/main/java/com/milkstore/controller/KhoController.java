@@ -6,6 +6,7 @@ import com.milkstore.entity.TonKho;
 import com.milkstore.repository.KhoNhanVienRepository;
 import com.milkstore.repository.KhoRepository;
 import com.milkstore.repository.TonKhoRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,9 +45,34 @@ public class KhoController {
         return khoRepository.findAllById(allowedMaKho);
     }
 
-    // Kiểm tra tồn kho của 1 sản phẩm tại 1 kho cụ thể
-    @GetMapping("/tonkho/{maKho}/{maHang}")
-    public Optional<TonKho> getStock(@PathVariable String maKho, @PathVariable String maHang) {
-        return tonKhoRepository.findByMaHangHoaAndMaKho(maHang, maKho);
+    // Thêm kho mới
+    @PostMapping
+    public Kho createKho(@Valid @RequestBody Kho kho) {
+        return khoRepository.save(kho);
+    }
+
+    // Cập nhật thông tin kho
+    @PutMapping("/{id}")
+    public Kho updateKho(@PathVariable String id, @Valid @RequestBody Kho kho) {
+        kho.setMaKho(id);
+        return khoRepository.save(kho);
+    }
+
+    // Xóa kho
+    @DeleteMapping("/{id}")
+    public void deleteKho(@PathVariable String id) {
+        khoRepository.deleteById(id);
+    }
+
+    // Cập nhật quyền truy cập kho cho nhân viên
+    @PostMapping("/permissions")
+    public void updatePermissions(@RequestBody List<KhoNhanVien> permissions) {
+        if (permissions != null && !permissions.isEmpty()) {
+            // Xóa quyền cũ của nhân viên này trước khi gán mới (giả sử tất cả thuộc về 1 nhân viên trong 1 lần gửi)
+            String username = permissions.get(0).getMaNhanVien();
+            List<KhoNhanVien> old = khoNhanVienRepository.findByMaNhanVienAndChonDung(username, 1);
+            khoNhanVienRepository.deleteAll(old);
+            khoNhanVienRepository.saveAll(permissions);
+        }
     }
 }
